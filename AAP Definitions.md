@@ -429,8 +429,8 @@ Once tracking is active, the AirPods stream sensor packets with the following co
 
 # LICENSE
 
-AirPods like Normal (ALN) - Bringing Apple-only features to Linux and Android for seamless AirPods functionality!
-Copyright (C) 2024 Kavish Devar
+LibrePods - AirPods liberated from Apple’s ecosystem
+Copyright (C) 2025 LibrePods contributors
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
