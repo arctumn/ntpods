@@ -27,7 +27,7 @@ These commands
 | 0x16 | ClickHoldMode | Two values (2 bytes; First byte = right bud Second byte = for left): `0x01` = Noise control `0x05` = Siri |
 | 0x17 | DoubleClickInterval | Single value (1 byte): 0x00 = Default, `0x01` = Slower, `0x02` = Slowest|
 | 0x18 | ClickHoldInterval | Single value (1 byte): 0x00 = Default, `0x01` = Slower, `0x02` = Slowest|
-| 0x1A | ListeningModeConfigs | Single value (1 byte): bitwise OR of the selected modes. Off mode = `0x01`, ANC=`0x02`, Transparency = 0x04, Adaptive = `0x08` |
+| 0x1A | ListeningModeConfigs | Single value (1 byte): bitmask, Off mode = `0x01`, ANC=`0x02`, Transparency = 0x04, Adaptive = `0x08` |
 | 0x1B | OneBudANCMode | Single value (1 byte): `0x01` = enabled, `0x02` = disabled |
 | 0x1C | CrownRotationDirection | Single value (1 byte): `0x01` = reversed, `0x02` = default |
 | 0x0D | ListeningMode | Single value (1 byte): 1 = Off, 2 = noise cancellation, 3 = transparency, 4 = adaptive |
@@ -48,6 +48,15 @@ These commands
 | 0x32 | Siri Multitone config | Single value (1 byte) |
 | 0x33 | Hearing Assist config | Single value (1 byte): `0x01` = enabled, `0x02` = disabled |
 | 0x34 | Allow Off Option for Listening Mode config | Single value (1 byte): `0x01` = enabled, `0x02` = disabled |
+| 0x35 | Sleep Detection config | Single value (1 byte): `0x01` = enabled, `0x02` = disabled |
+| 0x36 | Allow Auto Connect | Single value (1 byte): `0x01` = allow, `0x02` = disallow |
+| 0x39 | Raw Gestures config | Single value (1 byte): bitmask, single press = `0x01`, double press = `0x02`, triple press = `0x04`, long press = `0x08` |
+| 0x3C | System Siri message config | Single value (1 byte) |
+| 0x3E | Uplink EQ Bud config | Single value (1 byte) |
+| 0x3F | Uplink EQ Source config | Single value (1 byte) |
+| 0x40 | In Case Tone Volume | Single value (1 byte): 0 to 100 |
+| 0x41 | Disable Button Input config | Single value (1 byte) |
+
 
 
 > [!NOTE]
