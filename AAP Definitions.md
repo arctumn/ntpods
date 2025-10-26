@@ -279,50 +279,27 @@ duplicated thrice for some reason
 ## Customize Transparency mode
 
 ```
-52 18 00
-For left bud
-[Enabled]
+12 18 00 [enabled]
+<left bud>
 [EQ1][EQ2][EQ3][EQ4][EQ5][EQ6][EQ7][EQ8]
 [Amplification]
 [Tone]
 [Conversation Boost]
 [Ambient Noise Reduction]
-00 0080 3F
-<same for the right bud>
+<repeat for right bud>
 ```
 
-<!-- demo packet
-52 18 00 00 00 00 00 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 00 00 80 3f 00 00 80 3f 00 00 80 3f 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 62 10 DA 41 00 00 80 3f 00 00 80 3f 00 00 80 3f
 
--->
-<!-- 
-5218 0000 0080 3F62 10DA 413D 0AF0 4160
-E50C 42AC 9C1E 421B 2F29 429E 6F33 4293
-1846 4293 1846 4206 9476 BF00 576E BB00
-0080 3F00 0080 3F62 10DA 413D 0AF0 4160
-E50C 42AC 9C1E 421B 2F29 429E 6F33 4293
-1846 4293 1846 4200 0080 BF00 576E BB00
-0080 3F00 0080 3F
--->
-
-<!-- 
-5218 0000 0000 0062 10DA 413D 0AF0 4160
-E50C 42AC 9C1E 421B 2F29 429E 6F33 4293
-1846 4293 1846 4206 9476 BF00 576E BB00
-0080 3F00 0080 3F62 10DA 413D 0AF0 4160
-E50C 42AC 9C1E 421B 2F29 429E 6F33 4293
-1846 4293 1846 4200 0080 BF00 576E BB00
-0080 3F00 0080 3F
- -->
-
-All values are formatted as Little Endian from float values.
-| Data                | Type          | Value range |
-|---------------------|---------------|-------------|
-| Enabled             | Little Endian | 0 or 1      |
-| EQ                  | Little Endian | 0 to 100    |
-| Amplification       | Little Endian | -1 to 1     |
-| Tone                | Little Endian | -1 to 1     |
-| Conversation Boost  | Little Endian | 0 or 1      |
+All values are formatted as IEEE 754 floats in little endian order.
+| Data                    | Type          | Range |
+|-------------------------|---------------|-------|
+| Enabled                 | IEEE754 Float | 0/1   |
+| EQ                      | IEEE754 Float | 0-100 |
+| Amplification           | IEEE754 Float | 0-2   |
+| Tone                    | IEEE754 Float | 0-2   |
+| Conversation Boost      | IEEE754 Float | 0/1   |
+| Ambient Noise Reduction | IEEE754 Float | 0-1   |
+| Ambient Noise Reduction | IEEE754 Float | 0-1   |
 
 > [!IMPORTANT]
 > Also send the [Headphone Accomodation](#headphone-accomodation) after this.
