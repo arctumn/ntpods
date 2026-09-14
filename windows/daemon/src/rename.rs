@@ -3,9 +3,9 @@
 //!
 //! Renaming an audio endpoint writes to HKLM and needs admin, but the tray runs
 //! unelevated. So `install.ps1` registers an elevated, on-demand scheduled task
-//! ("LibrePods Rename Mic") that runs `lp-mic-rename` with highest privileges. We
+//! ("LibrePods Rename Mic") that runs `rename-mic.ps1` with highest privileges. We
 //! drop the desired name in a file and trigger the task via `schtasks /run`,
-//! which runs it elevated WITHOUT a UAC prompt. `lp-mic-rename` is idempotent —
+//! which runs it elevated WITHOUT a UAC prompt. `rename-mic.ps1` is idempotent —
 //! it does nothing (no audio-service restart) when the mic is already named
 //! correctly, so firing this on every launch is cheap.
 
@@ -17,7 +17,7 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 /// Best-effort, non-blocking: publish `dev_name` and kick the elevated rename
 /// task. Never blocks the tray or surfaces errors — if the task isn't installed,
-/// the manual `lp-mic-rename "<name>"` still works.
+/// an elevated `rename-mic.ps1 "<name>"` still works.
 pub fn apply(dev_name: &str) {
     let name = dev_name.trim().to_string();
     if name.is_empty() {

@@ -39,17 +39,20 @@ shown depend on the model (e.g. only Pro/Max have noise control).
    You should see "Test Mode" in the bottom-right of the desktop.
 
 ### b) Install — the one-shot way (recommended)
-Download the CI release artifact (or build it yourself, see below) and run
-[`installer/install.ps1`](installer/install.ps1) from an **admin** PowerShell:
+Download the CI release artifact (or build it yourself with
+[`installer/make-dist.ps1`](installer/make-dist.ps1)), extract it, and run
+[`installer/install.ps1`](installer/install.ps1) from an **admin** PowerShell
+inside the extracted folder:
 
 ```powershell
-.\install.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-It test-signs and installs **both** drivers, copies `librepodsd.exe` +
-`librepods-winui.exe` (and the FFmpeg DLLs) to `%LOCALAPPDATA%\LibrePods`, and
-adds the app to startup. The only external tool it needs is `signtool.exe` from
-the Windows SDK/WDK — no Visual Studio, no C++ toolchain.
+It checks Test Mode is on, test-signs and installs **both** drivers, copies
+`librepodsd.exe` + `librepods-winui.exe` (and the FFmpeg DLLs) to
+`%LOCALAPPDATA%\LibrePods`, registers the driver-recovery and mic-rename tasks,
+and adds the app to startup. The folder is self-contained: no Windows SDK/WDK,
+Visual Studio or VC++ redistributable needed. Reboot afterwards.
 
 ### c) Install — from the repo (prebuilt driver packages)
 Both drivers are committed prebuilt, so you can install them without building:
