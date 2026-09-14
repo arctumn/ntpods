@@ -104,6 +104,18 @@ $required = @(
 $missing = @($required | Where-Object { -not (Test-Path (Join-Path $Out $_)) })
 if ($missing) { throw "Dist is incomplete, missing: $($missing -join ', ')" }
 
+# Each driver catalog stores the flat SHA1/SHA256 of its INF. If the INF was
+# edited (or line-ending-converted) after inf2cat ran, the package won't install.
+foreach ($pkg in @(@('driver\LibrePodsAAP.inf', 'driver\librepodsaap.cat'),
+                   @('driver-mic\AudioCodec.inf', 'driver-mic\audiocodec.cat'))) {
+    $catHex = [BitConverter]::ToString([IO.File]::ReadAllBytes((Join-Path $Out $pkg[1]))).Replace('-', '')
+    $inf = Join-Path $Out $pkg[0]
+    $inCat = @('SHA1', 'SHA256') | Where-Object { $catHex.Contains((Get-FileHash $inf -Algorithm $_).Hash) }
+    if (-not $inCat) {
+        throw "$($pkg[0]) is not the INF $($pkg[1]) was generated for. Regenerate the catalog (inf2cat) or restore the matching INF."
+    }
+}
+
 # A clean Windows has no VC++ redistributable: the daemon must not import it.
 $bytes = [IO.File]::ReadAllBytes((Join-Path $Out 'librepodsd.exe'))
 $text = [Text.Encoding]::ASCII.GetString($bytes)
