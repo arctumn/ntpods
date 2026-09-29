@@ -58,17 +58,16 @@ and adds the app to startup. The folder is self-contained: no Windows SDK/WDK,
 Visual Studio or VC++ redistributable needed. Reboot afterwards.
 
 ### c) Install — just the drivers
-Each release also has **`LibrePods-Windows-drivers.zip`**: the two driver packages
-(`aap\` and `mic\`, each `.inf` + `.sys` + `.cat`), built from source by CI. Use it
-to install or update only the drivers. The same packages are committed under
+The release zip carries both driver packages, built from source by CI:
+`driver\` (AAP channel) and `driver-mic\` (virtual mic), each `.inf` + `.sys` +
+`.cat`. To install or update only the drivers, point the repo's scripts at those
+folders from an **admin** PowerShell. The same packages are committed under
 `drivers/*/prebuilt`, but those are refreshed by hand and **can lag the source** —
-prefer the release zip. Either way, install them with the repo's scripts from an
-**admin** PowerShell, pointing at the package folders (the extracted zip's `aap\` /
-`mic\`, or `drivers\*\prebuilt`):
+prefer the release zip.
 
 ```powershell
-.\drivers\aap\install.ps1 -PackageDir <folder>\aap   # AAP channel  (or .\drivers\aap\prebuilt)
-.\drivers\mic\install.ps1 -Dir <folder>\mic          # virtual mic  (or .\drivers\mic\prebuilt)
+.\drivers\aap\install.ps1 -PackageDir <zip>\driver   # AAP channel  (or .\drivers\aap\prebuilt)
+.\drivers\mic\install.ps1 -Dir <zip>\driver-mic      # virtual mic  (or .\drivers\mic\prebuilt)
 ```
 
 Success for the AAP driver shows `Driver package installed on device:
