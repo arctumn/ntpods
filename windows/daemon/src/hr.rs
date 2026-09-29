@@ -110,6 +110,13 @@ pub struct RtBuddyHeartRateDecoder {
     carry: Vec<u8>,
 }
 
+/// One validated reading: BPM plus the sensor's confidence byte (payload[2]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HrSample {
+    pub bpm: u16,
+    pub confidence: u8,
+}
+
 impl Default for RtBuddyHeartRateDecoder {
     fn default() -> Self {
         Self::new()
@@ -126,8 +133,8 @@ impl RtBuddyHeartRateDecoder {
         self.carry.clear();
     }
 
-    /// Feed one received chunk; returns any newly-decoded BPM samples.
-    pub fn feed(&mut self, chunk: &[u8]) -> Vec<u16> {
+    /// Feed one received chunk; returns any newly-decoded samples.
+    pub fn feed(&mut self, chunk: &[u8]) -> Vec<HrSample> {
         let mut samples = Vec::new();
         if chunk.is_empty() {
             return samples;
@@ -177,8 +184,8 @@ impl RtBuddyHeartRateDecoder {
             }
 
             let frame = &data[frame_offset..frame_offset + frame_length];
-            if let Some(bpm) = classify_frame(frame) {
-                samples.push(bpm);
+            if let Some(sample) = classify_frame(frame) {
+                samples.push(sample);
             }
             cursor = frame_offset + frame_length;
         }
@@ -187,9 +194,9 @@ impl RtBuddyHeartRateDecoder {
     }
 }
 
-/// Classify a reassembled frame; returns a validated BPM if (and only if) it is a
+/// Classify a reassembled frame; returns a validated sample (BPM + confidence) if (and only if) it is a
 /// live HEARTRATE record with an accepted payload.
-fn classify_frame(frame: &[u8]) -> Option<u16> {
+fn classify_frame(frame: &[u8]) -> Option<HrSample> {
     let top_level = parse_proto_message(frame, AACP_RTBUDDY_HEADER_LENGTH, frame.len())?;
 
     let log_type = top_level.first_varint(FIELD_LOG_TYPE).map(|v| v as i64).unwrap_or(-1);
@@ -220,7 +227,10 @@ fn classify_frame(frame: &[u8]) -> Option<u16> {
     payloads
         .iter()
         .find(|p| is_valid_heart_rate_payload(p))
-        .map(|p| p[HEART_RATE_BPM_OFFSET] as u16)
+        .map(|p| HrSample {
+            bpm: p[HEART_RATE_BPM_OFFSET] as u16,
+            confidence: p[HEART_RATE_CONFIDENCE_OFFSET],
+        })
 }
 
 fn collect_heart_rate_commands(

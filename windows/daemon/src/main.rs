@@ -17,6 +17,7 @@ mod eld;
 mod gatt;
 mod hearing;
 mod hr;
+mod hrdb;
 mod le;
 mod media;
 mod micpipe;
@@ -115,6 +116,8 @@ type ClientTx = std::sync::mpsc::Sender<Vec<u8>>;
 #[derive(Clone)]
 struct Ctx {
     state: Arc<Mutex<Snapshot>>,
+    /// Heart-rate tracking database (writer thread handle).
+    hr_db: hrdb::HrDb,
     clients: Arc<Mutex<Vec<ClientTx>>>,
     /// Raw-L2CAP proxy clients (the full app): each incoming AAP packet is
     /// forwarded to them (length-prefixed) so the app runs its session over us.
@@ -807,6 +810,7 @@ fn set_heart_rate(ctx: &Ctx, on: bool) {
             let _ = drv.send(&aap::hr_stream(s.wrapping_add(1), aap::STREAM_HEART_RATE_LEGACY, 0));
         }
         ctx.state.lock().unwrap().heart_rate = None;
+        ctx.hr_db.end_session();
         ctx.overlay("Heart rate monitoring off");
         // Any running retry thread observes hr_on=false on its next poll and exits.
     }
@@ -1079,6 +1083,7 @@ fn apply_command(ctx: &Ctx, cmd: Command) {
             // auto-reconnect on our own (a prompt is required).
             ctx.connect_requested.store(false, Ordering::Relaxed);
             ctx.user_disconnected.store(true, Ordering::Relaxed);
+            ctx.hr_db.end_session();
             ctx.state.lock().unwrap().connected = false;
             *ctx.driver_cell.lock().unwrap() = None;
             ctx.push_state();
@@ -1427,7 +1432,10 @@ fn run_receiver(ctx: Ctx) {
                             // Rendezvous with the retry thread: the stream is live.
                             ctx.hr_got_sample.store(true, Ordering::Relaxed);
                         }
-                        if let Some(bpm) = samples.into_iter().last() {
+                        for sample in &samples {
+                            ctx.hr_db.sample(ctx.mac, *sample);
+                        }
+                        if let Some(bpm) = samples.into_iter().last().map(|s| s.bpm) {
                             let changed = {
                                 let mut s = ctx.state.lock().unwrap();
                                 let c = s.heart_rate != Some(bpm);
@@ -1893,6 +1901,7 @@ fn run_receiver(ctx: Ctx) {
                             if cooling { ", reclaim cooling down" } else { "" }
                         ));
                         ctx.overlay("Disconnected");
+                        ctx.hr_db.end_session();
                         {
                             let mut s = ctx.state.lock().unwrap();
                             s.connected = false;
@@ -2004,6 +2013,7 @@ fn main() {
         l2cap_clients: Arc::new(Mutex::new(Vec::new())),
         replay: Arc::new(Mutex::new(std::collections::HashMap::new())),
         driver_cell: Arc::new(Mutex::new(None)),
+        hr_db: hrdb::HrDb::open(log),
         mic_on: Arc::new(AtomicBool::new(false)),
         auto_mode: Arc::new(AtomicBool::new(true)),
         hr_on: Arc::new(AtomicBool::new(false)),
