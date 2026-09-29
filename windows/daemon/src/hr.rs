@@ -22,10 +22,13 @@ const MAX_RTBUDDY_PAYLOAD_LENGTH: usize = 16 * 1024;
 const LIVE_SENSOR_DATA_LOG_TYPES: [u64; 2] = [1, 3];
 
 /// Different exact status trailers depending on whether one or both earbuds
-/// participate in the session.
-const KNOWN_HEART_RATE_STATUS_TAILS: [[u8; 3]; 4] = [
+/// participate in the session. `10 00 80` / `20 80 00` arrived with the iOS 27
+/// firmware (upstream PR #702, 5e20986).
+const KNOWN_HEART_RATE_STATUS_TAILS: [[u8; 3]; 6] = [
     [0x10, 0x00, 0x00],
+    [0x10, 0x00, 0x80],
     [0x20, 0x00, 0x00],
+    [0x20, 0x80, 0x00],
     [0x20, 0x02, 0x80],
     [0x20, 0x82, 0x80],
 ];
@@ -40,6 +43,12 @@ const FIELD_COMMAND_PAYLOAD: u32 = 3;
 const HEART_RATE_REPORT_SERVICES: [u64; 3] = [84, 20, 19];
 const HEART_RATE_PAYLOAD_LENGTH: usize = 18;
 const HEART_RATE_BPM_OFFSET: usize = 1;
+/// Byte 2 is the sensor's confidence: ~20 while the PPG warms up, then 160..240
+/// once it locks (measured on Windows 2026-09-29; matches SAGIRIxr's PR #702
+/// data). Warm-up readings can be wildly off yet still inside 30..220 (SAGIRIxr saw
+/// 169 and 137 at rest), so gate on confidence rather than trusting the range.
+const HEART_RATE_CONFIDENCE_OFFSET: usize = 2;
+const MIN_HEART_RATE_CONFIDENCE: u8 = 0x80;
 const HEART_RATE_STATUS_TAIL_OFFSET: usize = 15;
 const MIN_BPM: u8 = 30;
 const MAX_BPM: u8 = 220;
@@ -288,6 +297,9 @@ fn is_valid_heart_rate_payload(payload: &[u8]) -> bool {
     }
     let bpm = payload[HEART_RATE_BPM_OFFSET];
     if bpm < MIN_BPM || bpm > MAX_BPM {
+        return false;
+    }
+    if payload[HEART_RATE_CONFIDENCE_OFFSET] < MIN_HEART_RATE_CONFIDENCE {
         return false;
     }
     KNOWN_HEART_RATE_STATUS_TAILS.iter().any(|tail| {

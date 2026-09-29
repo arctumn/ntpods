@@ -95,17 +95,32 @@ LpConnect(
 
     brb->BtAddress    = Address;
     brb->Psm          = Psm;
-    // CF_ROLE_EITHER only. Tried adding CF_LINK_ENCRYPTED (the AACP socket is opened
-    // auth/encrypt on Android) — it triggers a re-authentication at open time that
-    // the controller rejects (HCI status 0x27), failing the connect, exactly the
-    // race a LibrePods dev described. The paired link is already encrypted de-facto
-    // (battery/ANC work), so requiring it explicitly only breaks the open; it is not
-    // the heart-rate blocker.
-    brb->ChannelFlags = CF_ROLE_EITHER;
+    // Authenticated + encrypted, like the AACP socket upstream android/rewrite opens
+    // (auth=true, encrypt=true). An earlier attempt with CF_LINK_ENCRYPTED alone hit
+    // a re-authentication the controller rejected (HCI 0x27); with both flags on a
+    // freshly paired link the open succeeds (2026-09-29). This is the configuration
+    // heart rate was verified with — whether HR strictly needs these flags (vs only
+    // the MTU below) is not yet isolated.
+    brb->ChannelFlags = CF_ROLE_EITHER | CF_LINK_AUTHENTICATED | CF_LINK_ENCRYPTED;
 
-    // Flags == 0 => let the stack negotiate default MTU/flush/QoS.
-    brb->ConfigOut.Flags    = 0;
-    brb->ConfigIn.Flags     = 0;
+    // HEART RATE (2026-09-29): advertise an incoming MTU of 1691 in our Configure
+    // Request, like Android (Fluoride) and Bumble do. With Flags == 0 the stack sent
+    // no MTU option, so the channel ran at the 672-byte default — and the AirPods
+    // only publish the RTBuddy services whose descriptor fits the MTU: devmotion6
+    // (~521 B) and activity (~573 B) made it, HEARTRATE/HEARTRATEv2 (~920 B) never
+    // did, so svc 19 answered kIOReturnBadArgument and no BPM ever arrived. On the
+    // same PC under Bumble with MTU 1691 the buds pushed the HR descriptors at once
+    // and streamed BPM. The daemon's receive buffer is 8 KiB, so 1691 fits.
+    //
+    // bthport semantics (verified on the air, HCI ETW 2026-09-29): ConfigIn is the
+    // INBOUND direction — it is what goes into OUR Configure Request as the MTU we
+    // can receive. ConfigOut only caps what we send (it showed up as MTU 1691 in our
+    // Configure *Response*, while our request still carried no MTU → 672 inbound).
+    brb->ConfigOut.Flags         = 0;
+    brb->ConfigIn.Flags          = CFG_MTU;
+    brb->ConfigIn.Mtu.Min        = 672;  // L2CAP default; accept down to it
+    brb->ConfigIn.Mtu.Preferred  = 1691; // what Android/Bumble request
+    brb->ConfigIn.Mtu.Max        = 1691;
     brb->IncomingQueueDepth = 10; // MS-recommended default
 
     // Be notified when the remote tears the channel down.
