@@ -7,8 +7,9 @@ that each feature needed.
   design: why `librepodsd` owns the drivers and the UIs are thin clients.
 - **[`hires-mic/PLAN.md`](hires-mic/PLAN.md)** — the hi-res AirPods microphone:
   the AAP uplink protocol, AAC-ELD decoding, and the virtual audio driver.
-- **[`heart-rate.md`](heart-rate.md)** — why there is no working heart-rate
-  monitoring on Windows yet, and everything that was ruled out.
+- **[`heart-rate.md`](heart-rate.md)** — heart-rate monitoring: why it needed the
+  AAP channel's MTU raised to 1691, what the daemon sends and decodes, and what was
+  ruled out on the way.
 - **[`aap-packet-discovery.md`](aap-packet-discovery.md)** — how to capture
   ground-truth AAP traffic on macOS/iOS to confirm or discover packets.
 

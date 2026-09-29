@@ -15,25 +15,42 @@
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                        Style="{ThemeResource CaptionTextBlockStyle}"
                        TextWrapping="Wrap" />
-            <!-- Honest heads-up: the feature is a work-in-progress test and may
-                 not produce readings yet. Non-closable so it always shows. -->
+            <!-- Still experimental (battery, only verified on AirPods Pro 3), but it
+                 does stream now. Non-closable so it always shows. -->
             <InfoBar Title="{Binding [HeartRateWarning_Title], Source={StaticResource Loc}}" Message="{Binding [HeartRateWarning_Message], Source={StaticResource Loc}}"
-                     Severity="Warning"
+                     Severity="Informational"
                      IsOpen="True"
                      IsClosable="False" />
             <ToggleSwitch OnContent="{Binding [Toggle_On], Source={StaticResource Loc}}" OffContent="{Binding [Toggle_Off], Source={StaticResource Loc}}" x:Name="HeartRateSwitch"
                           Header="{Binding [HeartRateSwitch_Header], Source={StaticResource Loc}}"
                           Toggled="HeartRate_Toggled" />
-            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
-                <TextBlock x:Name="HeartRateBpm"
-                           Text="—"
-                           Style="{ThemeResource TitleTextBlockStyle}"
-                           Foreground="{ThemeResource LibrePodsAccentBrush}" />
-                <TextBlock Text="{Binding [HeartRateBpmLabel_Text], Source={StaticResource Loc}}"
-                           VerticalAlignment="Bottom"
-                           Margin="0,0,0,4"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                    <TextBlock x:Name="HeartRateBpm"
+                               Text="—"
+                               Style="{ThemeResource TitleTextBlockStyle}"
+                               Foreground="{ThemeResource LibrePodsAccentBrush}" />
+                    <TextBlock Text="{Binding [HeartRateBpmLabel_Text], Source={StaticResource Loc}}"
+                               VerticalAlignment="Bottom"
+                               Margin="0,0,0,4"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <!-- Mini graph of the recent readings, like HeartRateMiniGraph in
+                     upstream PR #702; drawn in code-behind. -->
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="2">
+                    <Canvas x:Name="HeartRateGraph" Width="180" Height="48"
+                            SizeChanged="HeartRateGraph_SizeChanged" />
+                    <TextBlock x:Name="HeartRateGraphCaption"
+                               Text="{Binding [HeartRateGraphCaption_Text], Source={StaticResource Loc}}"
+                               HorizontalAlignment="Right"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+            </Grid>
         </StackPanel>
     </Border>
 </UserControl>

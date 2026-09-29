@@ -7,6 +7,9 @@ description = "LibrePods Windows daemon — owns the AAP driver + hi-res mic, se
 [dependencies]
 librepods-ipc = { path = "../ipc" }
 serde_json = "1"
+# Heart-rate tracking DB (hrdb.rs). `bundled` compiles SQLite in, so neither the
+# user nor the build machine needs it installed.
+rusqlite = { version = "0.32", features = ["bundled"] }
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_System_IO",

@@ -6,9 +6,12 @@ name: Windows CI (frontend)
 # that folder, so nothing may rely on tools installed on their PC (no WDK, no
 # Windows SDK, no VC++ redistributable).
 #
-# The two kernel drivers (AAP L2CAP + hi-res mic) are NOT built here — they need
-# the WDK. Their packages (.inf + .sys + .cat) are committed prebuilt and
-# install.ps1 test-signs them on the user's machine.
+# The two kernel drivers (AAP L2CAP + hi-res mic) are built here from source with
+# the WDK (installed via winget — approach from the Gab4545/librepods fork), their
+# catalogs are regenerated, and the result overwrites windows/drivers/*/prebuilt so
+# the install folder always carries drivers that match the source. The committed
+# prebuilt packages remain for local installs; install.ps1 test-signs them on the
+# user's machine either way.
 
 on:
   push:
@@ -20,11 +23,16 @@ on:
   pull_request:
     paths:
       - 'windows/**'
+      - '.github/workflows/ci-windows.yml'
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Pinned to windows-2022: windows-latest moved to Windows Server 2025 + VS2026,
+    # whose WDK/MSBuild integration for the WindowsKernelModeDriver10.0 toolset
+    # isn't there yet (MSB4062 loading Microsoft.DriverKit.Build.Tasks). VS2022
+    # (17.x) builds both drivers. Revisit once WDK support for VS2026 lands.
+    runs-on: windows-2022
     # Creating/updating GitHub Releases needs write access; the default
     # GITHUB_TOKEN is read-only on newer repos.
     permissions:
@@ -32,6 +40,75 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # ---- Kernel drivers (WDK) ------------------------------------------------
+      # A source change under windows/drivers/* only reaches users if the shipped
+      # .sys is rebuilt — e.g. the AAP channel's 1691-byte MTU that heart rate needs.
+      # Build both drivers here with Microsoft's WinGet-based WDK install
+      # (learn.microsoft.com/windows-hardware/drivers/install-the-wdk-using-winget),
+      # regenerate their catalogs, and overwrite windows/drivers/*/prebuilt so the
+      # "Assemble install folder" step below bundles the fresh builds.
+      # windows-2022 doesn't ship winget — install it first.
+      - name: Install winget
+        uses: Cyberboss/install-winget@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Windows SDK + WDK (winget)
+        shell: pwsh
+        run: |
+          foreach ($id in 'Microsoft.WindowsSDK.10.0.26100', 'Microsoft.WindowsWDK.10.0.26100') {
+            winget install --source winget --exact --id $id `
+              --accept-package-agreements --accept-source-agreements --disable-interactivity
+            # -1978335189 (0x8A15002B) = already installed / no applicable update.
+            if ($LASTEXITCODE -and $LASTEXITCODE -ne -1978335189) { throw "winget $id failed (exit $LASTEXITCODE)" }
+          }
+
+      - name: Build drivers (KMDF, x64 Release)
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & $vswhere -latest -version "[17.0,18.0)" -requires Microsoft.Component.MSBuild `
+            -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
+          if (-not $msbuild) { throw "MSBuild.exe not found via vswhere for VS2022 (17.x)" }
+          Write-Host "Using MSBuild: $msbuild"
+          # AAP: the WDK's own post-build Inf2Cat runs before the .sys sits next to
+          # the .inf and fails the signability test — the catalog is made below.
+          & $msbuild windows/drivers/aap/LibrePodsAAP.vcxproj /p:Configuration=Release /p:Platform=x64 /p:EnableInf2cat=false /m
+          if ($LASTEXITCODE) { throw "AAP driver build failed (exit $LASTEXITCODE)" }
+          & $msbuild windows/drivers/mic/AudioCodec/Driver/AudioCodec.sln /p:Configuration=Release /p:Platform=x64 /m
+          if ($LASTEXITCODE) { throw "Mic driver build failed (exit $LASTEXITCODE)" }
+
+      - name: Regenerate driver catalogs + refresh the prebuilt packages
+        shell: pwsh
+        run: |
+          $inf2cat = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter Inf2Cat.exe |
+            Where-Object { $_.FullName -match '\\x86\\' } | Select-Object -First 1
+          if (-not $inf2cat) { throw "Inf2Cat.exe not found under Windows Kits" }
+
+          # name, freshly built .sys, the .inf to ship, catalog name, prebuilt dir
+          $drivers = @(
+            @{ Name = 'LibrePodsAAP'; Inf = 'windows/drivers/aap/LibrePodsAAP.inf'; Cat = 'librepodsaap.cat'
+               Sys = (Get-ChildItem windows/drivers/aap -Recurse -Filter LibrePodsAAP.sys |
+                        Where-Object { $_.FullName -match '\\x64\\Release\\' -and $_.FullName -notmatch '\\prebuilt\\' } |
+                        Select-Object -First 1).FullName
+               Out = 'windows/drivers/aap/prebuilt' },
+            @{ Name = 'AudioCodec'; Inf = 'windows/drivers/mic/AudioCodec/Driver/x64/Release/AudioCodec.inf'; Cat = 'audiocodec.cat'
+               Sys = 'windows/drivers/mic/AudioCodec/Driver/x64/Release/AudioCodec.sys'
+               Out = 'windows/drivers/mic/prebuilt' }
+          )
+          foreach ($d in $drivers) {
+            foreach ($f in @($d.Sys, $d.Inf)) { if (-not $f -or -not (Test-Path $f)) { throw "$($d.Name): missing '$f' after build" } }
+            $pkg = "wdk-pkg-$($d.Name)"
+            Remove-Item $pkg -Recurse -Force -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Force -Path $pkg | Out-Null
+            Copy-Item $d.Sys, $d.Inf $pkg -Force
+            & $inf2cat.FullName /driver:$pkg /os:10_X64
+            $cat = Join-Path $pkg $d.Cat
+            if (-not (Test-Path $cat)) { throw "$($d.Name): Inf2Cat did not produce $($d.Cat)" }
+            Copy-Item (Join-Path $pkg '*') $d.Out -Force
+            Write-Host "==> Freshly built $($d.Name) copied into $($d.Out)"
+          }
 
       # ---- Rust: daemon (native msvc target) ---------------------------------
       - name: Install Rust
@@ -104,6 +181,23 @@ jobs:
           path: dist
           if-no-files-found: error
 
+      # The two driver packages on their own (.inf + .sys + .cat, built above), for
+      # installing or updating just the drivers — e.g. drivers/aap/install.ps1.
+      - name: Collect driver packages
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force drivers-out/aap, drivers-out/mic | Out-Null
+          Copy-Item windows/drivers/aap/prebuilt/* drivers-out/aap -Exclude README.md
+          Copy-Item windows/drivers/mic/prebuilt/* drivers-out/mic -Exclude README.md
+          Get-ChildItem drivers-out -Recurse -File | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.Substring(0,16), $_.FullName }
+
+      - name: Upload driver artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: librepods-windows-drivers
+          path: drivers-out
+          if-no-files-found: error
+
       # ---- Releases --------------------------------------------------------
       # push to windows-native → rolling "windows-nightly" pre-release, rebuilt on
       #                          every push and pointing at that commit.
@@ -112,7 +206,9 @@ jobs:
       - name: Package release zip
         if: startsWith(github.ref, 'refs/tags/windows-v') || (github.event_name == 'push' && github.ref == 'refs/heads/windows-native')
         shell: pwsh
-        run: Compress-Archive -Path dist/* -DestinationPath LibrePods-Windows.zip
+        run: |
+          Compress-Archive -Path dist/* -DestinationPath LibrePods-Windows.zip
+          Compress-Archive -Path drivers-out/* -DestinationPath LibrePods-Windows-drivers.zip
 
       - name: Publish nightly pre-release
         if: github.event_name == 'push' && github.ref == 'refs/heads/windows-native'
@@ -129,8 +225,11 @@ jobs:
           Extract the zip, then in an **admin** PowerShell inside the folder:
           ``powershell -ExecutionPolicy Bypass -File .\install.ps1``
           (Test Mode must be on first — see windows/README.md.)
+
+          ``LibrePods-Windows-drivers.zip`` holds just the two driver packages (AAP + mic),
+          built from source in this run — the same ones the install folder carries.
           "@
-          gh release create windows-nightly LibrePods-Windows.zip `
+          gh release create windows-nightly LibrePods-Windows.zip LibrePods-Windows-drivers.zip `
             --target ${{ github.sha }} --prerelease --latest=false `
             --title "LibrePods for Windows (nightly)" --notes $notes
           if ($LASTEXITCODE) { throw "gh release create failed ($LASTEXITCODE)" }
@@ -141,7 +240,9 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: LibrePods for Windows ${{ github.ref_name }}
-          files: LibrePods-Windows.zip
+          files: |
+            LibrePods-Windows.zip
+            LibrePods-Windows-drivers.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
