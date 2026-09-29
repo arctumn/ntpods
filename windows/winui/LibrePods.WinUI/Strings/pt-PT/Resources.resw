@@ -126,7 +126,8 @@
   <data name="HeartRateSwitch.Header" xml:space="preserve"><value>Monitorizar frequência cardíaca</value></data>
   <data name="HeartRateBpmLabel.Text" xml:space="preserve"><value>bpm</value></data>
   <data name="HeartRateWarning.Title" xml:space="preserve"><value>Experimental — em teste</value></data>
-  <data name="HeartRateWarning.Message" xml:space="preserve"><value>Isto é um teste em desenvolvimento e pode ainda não apresentar leituras.</value></data>
+  <data name="HeartRateWarning.Message" xml:space="preserve"><value>Funciona com AirPods Pro 3. A primeira leitura demora alguns segundos enquanto o sensor estabiliza.</value></data>
+  <data name="HeartRateGraphCaption.Text" xml:space="preserve"><value>Últimas 24 leituras</value></data>
 
   <!-- ===== SettingsPage ===== -->
   <data name="SettingsTitle.Text" xml:space="preserve"><value>Definições</value></data>
