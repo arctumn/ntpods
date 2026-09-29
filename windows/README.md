@@ -1,8 +1,9 @@
 # LibrePods on Windows
 
 Open-source AirPods control for Windows: battery, noise control, ear detection,
-conversational awareness, volume/mute, hearing aid, device rename — and the
-AirPods' **hi-res microphone as a real Windows input**, so any app can use it.
+conversational awareness, volume/mute, hearing aid, device rename, the AirPods'
+**hi-res microphone as a real Windows input** so any app can use it, and
+**heart-rate monitoring** on AirPods Pro 3 (live BPM, a graph and your history).
 
 It has these parts:
 
@@ -39,7 +40,9 @@ shown depend on the model (e.g. only Pro/Max have noise control).
    You should see "Test Mode" in the bottom-right of the desktop.
 
 ### b) Install — the one-shot way (recommended)
-Download the CI release artifact (or build it yourself with
+Download **`LibrePods-Windows.zip`** from the
+[`windows-nightly` release](https://github.com/arctumn/librepods/releases/tag/windows-nightly)
+(rebuilt on every push to `windows-native`; or build it yourself with
 [`installer/make-dist.ps1`](installer/make-dist.ps1)), extract it, and run
 [`installer/install.ps1`](installer/install.ps1) from an **admin** PowerShell
 inside the extracted folder:
@@ -54,12 +57,18 @@ It checks Test Mode is on, test-signs and installs **both** drivers, copies
 and adds the app to startup. The folder is self-contained: no Windows SDK/WDK,
 Visual Studio or VC++ redistributable needed. Reboot afterwards.
 
-### c) Install — from the repo (prebuilt driver packages)
-Both drivers are committed prebuilt, so you can install them without building:
+### c) Install — just the drivers
+Each release also has **`LibrePods-Windows-drivers.zip`**: the two driver packages
+(`aap\` and `mic\`, each `.inf` + `.sys` + `.cat`), built from source by CI. Use it
+to install or update only the drivers. The same packages are committed under
+`drivers/*/prebuilt`, but those are refreshed by hand and **can lag the source** —
+prefer the release zip. Either way, install them with the repo's scripts from an
+**admin** PowerShell, pointing at the package folders (the extracted zip's `aap\` /
+`mic\`, or `drivers\*\prebuilt`):
 
 ```powershell
-.\drivers\aap\install.ps1 -PackageDir .\drivers\aap\prebuilt   # AAP channel
-.\drivers\mic\install.ps1 -Dir .\drivers\mic\prebuilt          # virtual mic
+.\drivers\aap\install.ps1 -PackageDir <folder>\aap   # AAP channel  (or .\drivers\aap\prebuilt)
+.\drivers\mic\install.ps1 -Dir <folder>\mic          # virtual mic  (or .\drivers\mic\prebuilt)
 ```
 
 Success for the AAP driver shows `Driver package installed on device:
@@ -71,9 +80,11 @@ The mic driver creates a `ROOT\AudioCodec` device via `devcon`; a virtual
 microphone should appear in **Sound ▸ Input**.
 
 ### Building the drivers yourself (optional)
-Needs Visual Studio 2022/2026 with **Desktop development with C++** + **Spectre
-x64/x86 libs** + a **Windows 11 SDK** and the **matching WDK** (SDK & WDK build
-numbers must match, e.g. `28000`). See
+CI builds both drivers on every run ([`ci-windows.yml`](../.github/workflows/ci-windows.yml):
+`windows-2022`, SDK + WDK 10.0.26100 via winget, catalogs regenerated with Inf2Cat).
+To build locally you need Visual Studio 2022/2026 with **Desktop development with
+C++** + **Spectre x64/x86 libs** + a **Windows 11 SDK** and the **matching WDK**
+(SDK & WDK build numbers must match, e.g. `28000`). See
 [`drivers/aap/README.md`](drivers/aap/README.md) and
 [`drivers/mic/README.md`](drivers/mic/README.md).
 
@@ -82,6 +93,8 @@ numbers must match, e.g. `28000`). See
 pnputil /delete-driver oem<N>.inf /uninstall   # find <N> with: pnputil /enum-drivers
 bcdedit /set testsigning off                    # then re-enable Secure Boot in BIOS
 ```
+The app's data (settings, logs, the heart-rate history) lives in
+`%LOCALAPPDATA%\LibrePods` — delete that folder to remove it too.
 
 ---
 
@@ -91,8 +104,9 @@ Two pieces run: the **daemon** (`librepodsd.exe`, headless) and the **WinUI app*
 (`librepods-winui.exe`). Build the daemon natively on Windows, or from WSL/Linux
 (cross-compiled): `cargo build --release --target x86_64-pc-windows-gnu` in
 `daemon/` — run `daemon/fetch-ffmpeg.sh` first, the FFmpeg slice used for AAC-ELD
-decoding is fetched, not committed. Build the WinUI app with `dotnet build`. The
-CI's release artifact bundles both plus the FFmpeg DLLs and the prebuilt drivers.
+decoding is fetched, not committed. Build the WinUI app with Visual Studio's
+MSBuild (`dotnet build` can't load the WinUI PRI task). The release zip bundles
+both, the FFmpeg DLLs and the two drivers CI built from source.
 
 Launch `librepods-winui.exe`; it auto-starts the daemon, shows a tray icon, and its
 window hides to the tray on close. To start it at login, use the installer (which
@@ -111,7 +125,7 @@ registers it) or [`startup.ps1`](startup.ps1).
     (the current one is checked; click to switch — sends the AAP command),
   - **Mute**, **Open** (the main window), **Quit**.
 - The main window adds volume, ear detection, conversational awareness, adaptive
-  volume, the hi-res mic, hearing aid and device rename.
+  volume, the hi-res mic, heart rate, hearing aid and device rename.
 - Hover the icon for a tooltip with battery + current mode.
 - If the link drops it reconnects automatically.
 
@@ -123,6 +137,24 @@ AAC-ELD stream and feeds the driver; when the app releases the mic it stops
 active the AirPods are in their bidirectional call mode, so playback is mono — that
 is the AirPods' behaviour, not a bug; stereo is restored when the mic stops.
 
+### Heart rate (AirPods Pro 3)
+Switch **Monitor heart rate** on in the Heart Rate card. After a few seconds while
+the sensor settles you get one reading per second:
+
+- the **current BPM**, and a graph of the **last minute** with its min / avg / max
+  (hover the graph for a reading's value and how long ago it was);
+- the **Readings** picker switches the graph to a **past session**: every reading
+  of it, with its stats and the time of each point.
+
+Every reading is kept in a dedicated SQLite database,
+`%LOCALAPPDATA%\LibrePods\heart-rate.sqlite3` (`sessions` + `samples`: time, BPM
+and the sensor's confidence), so you can also query it with any SQLite tool. It
+uses extra battery while it's on.
+
+The PC has to be the AirPods' **active** device — if your iPhone is holding them,
+they don't answer sensor requests from the PC. How it works (and why it needed the
+driver's 1691-byte L2CAP MTU): [`docs/heart-rate.md`](docs/heart-rate.md).
+
 ### Bonus
 Keeping the AAP session alive (app running) tends to **stabilize the audio** —
 the AirPods stop bouncing between the HFP (mono, "static") and A2DP (stereo)
@@ -132,7 +164,7 @@ profiles, because a proper AAP host is talking to them.
 - The AAP channel is **exclusive** — the daemon owns it, which is why the UIs are
   IPC clients rather than talking to the driver themselves. Several UI clients can
   run at once.
-- **Heart rate** — works on AirPods Pro 3 (1 Hz BPM). It's still behind an
-  experimental setting (it costs battery); see [`docs/heart-rate.md`](docs/heart-rate.md)
-  for how it works and why it needs the driver's 1691-byte channel MTU.
+- **Heart rate** — AirPods Pro 3 only (the model it's been verified on); see
+  [Heart rate](#heart-rate-airpods-pro-3) above.
+- **Hearing aid** is still experimental — it's behind **Settings ▸ Experimental**.
 - Requires both drivers installed and Test Mode on.

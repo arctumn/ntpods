@@ -127,12 +127,23 @@ Two protocol notes from the investigation:
 - **The AirPods only answer sensor requests from the active host.** With another
   device (e.g. the iPhone) holding the buds, RTBuddy stays silent to the PC.
 
-## The setting
+## In the app
 
-**Settings ▸ Experimental ▸ "Show heart-rate monitoring (experimental)"** shows the
-heart-rate card on the device page. Switching it on starts the stream. It is still
-marked experimental: it uses battery, and it has only been verified on AirPods Pro
-3.
+The **Heart Rate** card is always on the device page. It is no longer behind
+Settings ▸ Experimental. Switching **Monitor heart rate** on starts the stream.
+
+- The card shows the current BPM and a graph of the last minute, with min / avg /
+  max. Hovering a point shows its value.
+- The **Readings** picker switches the graph to a past session.
+
+Every reading is stored by the daemon (`daemon/src/hrdb.rs`) in
+`%LOCALAPPDATA%\LibrePods\heart-rate.sqlite3`, which has two tables:
+
+- `sessions` (device, start, end);
+- `samples` (session, Unix ms, BPM, confidence).
+
+The app only reads it. HR has only been verified on AirPods Pro 3, and it uses
+extra battery while it's on.
 
 ## References
 
