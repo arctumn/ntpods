@@ -132,6 +132,7 @@ profiles, because a proper AAP host is talking to them.
 - The AAP channel is **exclusive** — the daemon owns it, which is why the UIs are
   IPC clients rather than talking to the driver themselves. Several UI clients can
   run at once.
-- **Heart rate** — no working version on Windows yet. It's off by default behind an
-  experimental setting; see [`docs/heart-rate.md`](docs/heart-rate.md).
+- **Heart rate** — works on AirPods Pro 3 (1 Hz BPM). It's still behind an
+  experimental setting (it costs battery); see [`docs/heart-rate.md`](docs/heart-rate.md)
+  for how it works and why it needs the driver's 1691-byte channel MTU.
 - Requires both drivers installed and Test Mode on.
