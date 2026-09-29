@@ -61,11 +61,10 @@
                     <controls:BatteryCard x:Name="BatteryCard" />
                     <controls:VolumeCard x:Name="VolumeCard" />
                     <controls:AdaptiveNoiseCard x:Name="AdaptiveNoiseCard" />
-                    <!-- Heart-rate: hidden by default (experimental: battery, only
-                         verified on AirPods Pro 3 — see windows/docs/heart-rate.md). Shown
-                         when the user opts in via Settings ▸ Experimental; visibility is
-                         set from AppSettings in the DevicePage code-behind. -->
-                    <controls:HeartRateCard x:Name="HeartRateCard" Visibility="Collapsed" />
+                    <!-- Heart rate (AirPods Pro 3 — see windows/docs/heart-rate.md). Off
+                         until the user switches it on; no longer behind the experimental
+                         opt-in. -->
+                    <controls:HeartRateCard x:Name="HeartRateCard" />
                     <controls:HearingAidCard x:Name="HearingAidCard" Visibility="Collapsed" />
                 </StackPanel>
 

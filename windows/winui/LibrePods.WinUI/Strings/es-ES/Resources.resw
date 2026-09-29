@@ -122,12 +122,17 @@
   <data name="HearingAidTone.Header" xml:space="preserve"><value>Tono</value></data>
   <!-- ===== HeartRateCard ===== -->
   <data name="HeartRateTitle.Text" xml:space="preserve"><value>Frecuencia cardíaca</value></data>
-  <data name="HeartRateSubtitle.Text" xml:space="preserve"><value>Solo AirPods Pro 3 — experimental. Consume batería.</value></data>
+  <data name="HeartRateSubtitle.Text" xml:space="preserve"><value>AirPods Pro 3. Gasta más batería mientras está activado.</value></data>
   <data name="HeartRateSwitch.Header" xml:space="preserve"><value>Monitorizar frecuencia cardíaca</value></data>
   <data name="HeartRateBpmLabel.Text" xml:space="preserve"><value>ppm</value></data>
-  <data name="HeartRateWarning.Title" xml:space="preserve"><value>Experimental — en prueba</value></data>
-  <data name="HeartRateWarning.Message" xml:space="preserve"><value>Funciona con AirPods Pro 3. La primera lectura tarda unos segundos mientras el sensor se estabiliza.</value></data>
-  <data name="HeartRateGraphCaption.Text" xml:space="preserve"><value>Últimas 24 lecturas</value></data>
+  <data name="HeartRateGraphStats" xml:space="preserve"><value>Últimas {0} lecturas · mín {1} · media {2} · máx {3} lpm</value></data>
+  <data name="HeartRateGraphEmpty" xml:space="preserve"><value>Aún sin lecturas</value></data>
+  <data name="HeartRateGraphPoint" xml:space="preserve"><value>{0} lpm · hace {1} s</value></data>
+  <data name="HeartRateHistory.Header" xml:space="preserve"><value>Lecturas</value></data>
+  <data name="HeartRateHistoryLive" xml:space="preserve"><value>En directo — último minuto</value></data>
+  <data name="HeartRateHistorySession" xml:space="preserve"><value>{0:g} · {1} min · media {2} lpm</value></data>
+  <data name="HeartRateSessionStats" xml:space="preserve"><value>{0} lecturas · mín {1} · media {2} · máx {3} lpm</value></data>
+  <data name="HeartRateGraphPointAt" xml:space="preserve"><value>{0} lpm · {1:HH:mm:ss}</value></data>
 
   <!-- ===== SettingsPage ===== -->
   <data name="SettingsTitle.Text" xml:space="preserve"><value>Ajustes</value></data>
@@ -149,7 +154,7 @@
   <data name="SettingsStartup.Text" xml:space="preserve"><value>Inicio</value></data>
   <data name="SettingsStartupToggle.Header" xml:space="preserve"><value>Iniciar LibrePods al arrancar Windows</value></data>
   <data name="SettingsHrWarning.Title" xml:space="preserve"><value>Funciones experimentales</value></data>
-  <data name="SettingsHrWarning.Message" xml:space="preserve"><value>Estas funciones son experimentales y pueden ser inestables. La monitorización de la frecuencia cardíaca, en particular, no funciona en Windows: los AirPods la restringen a equipos Apple (los auriculares confirman la solicitud, pero nunca envían lecturas).</value></data>
+  <data name="SettingsHrWarning.Message" xml:space="preserve"><value>Estas funciones son experimentales y pueden ser inestables.</value></data>
   <data name="SettingsHrToggle.Header" xml:space="preserve"><value>Mostrar funciones experimentales</value></data>
   <data name="SettingsDeviceInfo.Text" xml:space="preserve"><value>Información del dispositivo</value></data>
   <data name="DeviceInfoModel.Text" xml:space="preserve"><value>Modelo</value></data>

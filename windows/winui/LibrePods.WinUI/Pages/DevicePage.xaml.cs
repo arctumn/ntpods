@@ -33,8 +33,9 @@ public sealed partial class DevicePage : UserControl
     public DevicePage()
     {
         InitializeComponent();
-        // Experimental cards (heart-rate + hearing-aid) are hidden by default. Show
-        // them only when the user opts in via Settings ▸ Experimental.
+        // Experimental cards (hearing aid) are hidden by default. Show them only
+        // when the user opts in via Settings ▸ Experimental. (Heart rate works and
+        // is always shown.)
         ApplyExperimentalVisibility();
 
         // Daemon overlays are one-shot strings resolved when they arrive, so one
@@ -52,7 +53,6 @@ public sealed partial class DevicePage : UserControl
     private void ApplyExperimentalVisibility()
     {
         var vis = AppSettings.EnableExperimental ? Visibility.Visible : Visibility.Collapsed;
-        HeartRateCard.Visibility = vis;
         HearingAidCard.Visibility = vis;
     }
 

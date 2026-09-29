@@ -41,7 +41,7 @@ public sealed partial class MainWindow : Window
         if (RootGrid is not null) RootGrid.RequestedTheme = AppSettings.Theme;
         SettingsPageView.InitThemeSelector(AppSettings.ThemeIndex);
 
-        // The experimental heart-rate opt-in lives in Settings; the DevicePage owns
+        // The experimental opt-in (hearing aid) lives in Settings; the DevicePage owns
         // the card. Refresh its visibility live when the toggle flips.
         SettingsPageView.ExperimentalVisibilityChanged += () => DevicePageView.RefreshExperimentalVisibility();
         SettingsPageView.InitExperimentalSetting();

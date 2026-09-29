@@ -7,7 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <!-- Heart rate (AirPods Pro 3, experimental) -->
+    <!-- Heart rate (AirPods Pro 3) -->
     <Border Style="{StaticResource Card}">
         <StackPanel Spacing="8">
             <TextBlock Text="{Binding [HeartRateTitle_Text], Source={StaticResource Loc}}" Style="{ThemeResource BodyStrongTextBlockStyle}" />
@@ -15,15 +15,10 @@
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                        Style="{ThemeResource CaptionTextBlockStyle}"
                        TextWrapping="Wrap" />
-            <!-- Still experimental (battery, only verified on AirPods Pro 3), but it
-                 does stream now. Non-closable so it always shows. -->
-            <InfoBar Title="{Binding [HeartRateWarning_Title], Source={StaticResource Loc}}" Message="{Binding [HeartRateWarning_Message], Source={StaticResource Loc}}"
-                     Severity="Informational"
-                     IsOpen="True"
-                     IsClosable="False" />
             <ToggleSwitch OnContent="{Binding [Toggle_On], Source={StaticResource Loc}}" OffContent="{Binding [Toggle_Off], Source={StaticResource Loc}}" x:Name="HeartRateSwitch"
                           Header="{Binding [HeartRateSwitch_Header], Source={StaticResource Loc}}"
                           Toggled="HeartRate_Toggled" />
+            <!-- Current BPM on the left, min/avg/max of the window on the right. -->
             <Grid ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -39,17 +34,43 @@
                                Margin="0,0,0,4"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
-                <!-- Mini graph of the recent readings, like HeartRateMiniGraph in
-                     upstream PR #702; drawn in code-behind. -->
-                <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="2">
-                    <Canvas x:Name="HeartRateGraph" Width="180" Height="48"
-                            SizeChanged="HeartRateGraph_SizeChanged" />
-                    <TextBlock x:Name="HeartRateGraphCaption"
-                               Text="{Binding [HeartRateGraphCaption_Text], Source={StaticResource Loc}}"
-                               HorizontalAlignment="Right"
+                <TextBlock x:Name="HeartRateGraphCaption" Grid.Column="1"
+                           HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,4"
+                           TextWrapping="Wrap" TextAlignment="Right"
+                           Style="{ThemeResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+            <!-- What the graph shows: live (last minute) or a past session from the
+                 daemon's heart-rate database. The list refreshes when it opens. -->
+            <ComboBox x:Name="HistoryPicker"
+                      Header="{Binding [HeartRateHistory_Header], Source={StaticResource Loc}}"
+                      HorizontalAlignment="Stretch"
+                      DropDownOpened="HistoryPicker_DropDownOpened"
+                      SelectionChanged="HistoryPicker_SelectionChanged" />
+            <!-- Full-width graph of the recent readings (like HeartRateMiniGraph in
+                 upstream PR #702): the scale's BPM on the left axis, a guide per axis
+                 label, and the value under the pointer on hover. Drawn in code-behind. -->
+            <Grid ColumnSpacing="8" Height="140">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid MinWidth="24">
+                    <TextBlock x:Name="GraphAxisMax" VerticalAlignment="Top" HorizontalAlignment="Right"
                                Style="{ThemeResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                </StackPanel>
+                    <TextBlock x:Name="GraphAxisMid" VerticalAlignment="Center" HorizontalAlignment="Right"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock x:Name="GraphAxisMin" VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                </Grid>
+                <Canvas x:Name="HeartRateGraph" Grid.Column="1"
+                        Background="Transparent"
+                        SizeChanged="HeartRateGraph_SizeChanged"
+                        PointerMoved="HeartRateGraph_PointerMoved"
+                        PointerExited="HeartRateGraph_PointerExited" />
             </Grid>
         </StackPanel>
     </Border>

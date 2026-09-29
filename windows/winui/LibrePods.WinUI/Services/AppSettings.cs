@@ -15,10 +15,9 @@ public static class AppSettings
         // 0 = System (Default), 1 = Light, 2 = Dark — the ThemeButtons indices.
         public int ThemeIndex { get; set; }
 
-        // Experimental gate for ALL experimental main-UI cards (heart-rate AND
-        // hearing-aid). Off by default. Heart rate in particular does not work on
-        // Windows (Apple-host gate — the buds ACK the enable but never send readings;
-        // see docs/heart-rate.md), and the hearing-aid ATT channel is still maturing.
+        // Experimental gate for the experimental main-UI cards (hearing aid — its ATT
+        // channel is still maturing). Off by default. Heart rate used to sit behind
+        // this too; it works now (docs/heart-rate.md) and is always shown.
         public bool EnableExperimental { get; set; }
 
         // BCP-47 UI language override (e.g. "pt-PT"); "" = follow the system.
@@ -93,7 +92,7 @@ public static class AppSettings
         Save(m);
     }
 
-    /// Whether experimental cards (heart-rate + hearing-aid) are shown (off by default).
+    /// Whether experimental cards (hearing aid) are shown (off by default).
     public static bool EnableExperimental => Load().EnableExperimental;
 
     /// Persist the experimental-features opt-in.

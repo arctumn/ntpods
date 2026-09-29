@@ -77,9 +77,8 @@
             </Border>
 
             <!-- Experimental — collapsed by default so it isn't immediately visible;
-                 the user must expand it to reach the opt-ins. Heart rate is off by
-                 default because AirPods gate the HR stream to Apple hosts; on Windows
-                 it does not work. -->
+                 the user must expand it to reach the opt-ins (hearing aid). Heart rate
+                 is no longer here: it works and is always shown on the device page. -->
             <Expander HorizontalAlignment="Stretch"
                       HorizontalContentAlignment="Stretch"
                       IsExpanded="False">
