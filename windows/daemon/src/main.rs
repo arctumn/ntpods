@@ -747,9 +747,10 @@ fn set_mic(ctx: &Ctx, on: bool) {
 }
 
 // ---- HR retry constants (mirror the Android HeartRateMonitor companion) ----
-/// Wait this long for a decoded reading before re-enabling (Android's
-/// FIRST_SAMPLE_TIMEOUT).
-const HR_FIRST_SAMPLE_TIMEOUT_MS: u64 = 8_000;
+/// Wait this long for a decoded reading before re-enabling. Android uses 8 s, but
+/// the decoder now drops the PPG warm-up (confidence < 0x80), and the first locked
+/// sample lands ~6-8 s after the start — 12 s avoids re-enabling mid-warm-up.
+const HR_FIRST_SAMPLE_TIMEOUT_MS: u64 = 12_000;
 /// Gap after HRM_STATE before the stream start (Android's START_COMMAND_DELAY).
 const HR_START_COMMAND_DELAY_MS: u64 = 120;
 
@@ -840,13 +841,13 @@ fn spawn_hr_retry(ctx: &Ctx) {
 
 /// Keep re-sending the enable sequence and waiting for a REAL heart-rate reading,
 /// mirroring the Android HeartRateMonitor loop. One attempt = full enable + up to
-/// FIRST_SAMPLE_TIMEOUT waiting for a *decoded reading*. Crucially, mere ACKs / a
-/// live-but-empty stream do NOT end the campaign: the whole failure mode is that the
-/// AirPods ACK service 19 yet never stream data. Plain re-enable retries repeat over
-/// the SAME channel, up to HR_MAX_ATTEMPTS, then give up — we never rebuild/reconnect
-/// the L2CAP channel, because the audio + mic links ride it and must never be
-/// collapsed for a feature that (on this firmware) never yields data. Runs until a
-/// reading lands, the user turns HR off, or the attempts are spent.
+/// FIRST_SAMPLE_TIMEOUT waiting for a *decoded reading*. Mere ACKs / a live-but-empty
+/// stream do NOT end the campaign: the buds ACK a start they will never serve (e.g.
+/// when the AAP channel's MTU is too small for the HR descriptor — see the driver's
+/// L2cap.c). Plain re-enable retries repeat over the SAME channel, up to
+/// HR_MAX_ATTEMPTS, then give up — we never rebuild/reconnect the L2CAP channel,
+/// because the audio + mic links ride it and must not be collapsed for an optional
+/// feature. Runs until a reading lands, the user turns HR off, or the attempts are spent.
 fn hr_retry_campaign(ctx: &Ctx) -> HrOutcome {
     let mut attempt: u32 = 0;
     while ctx.hr_on.load(Ordering::Relaxed) {
@@ -859,11 +860,9 @@ fn hr_retry_campaign(ctx: &Ctx) -> HrOutcome {
                 return HrOutcome::GiveUp;
             }
         };
-        // beforeFirstStart (Android): stop head tracking up front — it shares the
-        // sensor service — and settle 220 ms, BEFORE the session init, matching the
-        // working client's ordering exactly (the PR author confirmed his flow).
-        let _ = drv.send(&aap::sensor_stream(next_hr_seq(), aap::STREAM_HEAD_TRACKING, 0));
-        thread::sleep(Duration::from_millis(220));
+        // (No "stop head tracking" first any more: the service it stopped, 0x0E, is the
+        // ACTIVITY classifier, not head tracking, and heart rate streams fine next to
+        // running motion services.)
         // AACP 1.3 session init (connect0/caps0/connect4/caps4), re-sent every attempt
         // so each retry re-establishes the session before the enable.
         let init: [(&[u8], u64); 4] = [
@@ -916,12 +915,12 @@ fn hr_retry_campaign(ctx: &Ctx) -> HrOutcome {
         attempt += 1;
         let streaming = ctx.hr_stream_live.load(Ordering::Relaxed);
         log(&format!(
-            "HR retry: attempt={attempt} — no reading in 8s (stream_frames={streaming})"
+            "HR retry: attempt={attempt} — no reading in {}s (stream_frames={streaming})",
+            HR_FIRST_SAMPLE_TIMEOUT_MS / 1000
         ));
         // No reading after this attempt. Do NOT rebuild / reconnect the L2CAP channel:
-        // on this firmware the buds only ever ACK service 19 and never stream, so
-        // reconnecting to "try again" is pointless churn (it just re-opens the audio
-        // link). Give up after HR_MAX_ATTEMPTS; the user toggles HR off/on to retry.
+        // that just re-opens the audio link for an optional feature. Give up after
+        // HR_MAX_ATTEMPTS; the user toggles HR off/on to retry.
         if attempt >= HR_MAX_ATTEMPTS {
             log("HR: no reading after the enable retries (ACKs only) — giving up; \
                  toggle HR off/on to retry");
@@ -1325,7 +1324,7 @@ fn run_receiver(ctx: Ctx) {
         // Frames carrying the type-19 heart-rate signature `08 13 1a 12` (vs the
         // 50 Hz type-16 raw-PPG flood, which shares the RTBuddy prefix).
         let mut hr_type19 = 0u32;
-        let mut hr_type14 = 0u32; // head-tracking frames (sensor-service contention)
+        let mut hr_type14 = 0u32; // activity-classifier (svc 14) frames
         // Diagnose stale-"connected": throttled log of the raw driver status when
         // it isn't a clean 2, so we can see what "cased" vs "both-out-resting"
         // actually report (the teardown decision hinges on them differing).
@@ -1402,9 +1401,8 @@ fn run_receiver(ctx: Ctx) {
                         if hr::contains_frame_prefix(data) {
                             hr_frames += 1;
                             ctx.hr_stream_live.store(true, Ordering::Relaxed);
-                            // Count head-tracking (type 14: `08 0e 1a`) frames too,
-                            // to see whether it's still streaming and stealing the
-                            // sensor service from the computed heart rate.
+                            // Count activity-classifier (type 14: `08 0e 1a`) frames
+                            // too — diagnostic only; they don't block heart rate.
                             if data.windows(3).any(|w| w == [0x08, 0x0e, 0x1a]) {
                                 hr_type14 += 1;
                             }

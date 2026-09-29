@@ -102,10 +102,12 @@ pub const STREAM_HEART_RATE_LEGACY: u8 = 0x13; // HEARTRATE — older firmware
 /// so it is NOT part of the HR enable — the ~150 frames/window we saw were motion,
 /// never PPG. Kept for reference only.
 pub const STREAM_DEVMOTION6: u8 = 0x10;
-/// Stream id for head tracking — data type 14. Head tracking lives on the same
-/// 0x17 sensor service as heart rate, so a running head-tracking stream may be
-/// what blocks the computed HR; stopping it first (period 0) is worth trying.
-pub const STREAM_HEAD_TRACKING: u8 = 0x0E;
+/// Stream id 14 — the ACTIVITY classifier (RTBuddy SensorServiceType 14; its
+/// descriptor names it "activity"), NOT head tracking as this was once labelled.
+/// It reports a 23-byte record at ~5 Hz whose byte 12 is the activity state
+/// (3 = still, 0/1/2 while moving). Head tracking uses DEVMOTION6 (16). Kept for
+/// reference; heart rate does not need it stopped.
+pub const STREAM_ACTIVITY: u8 = 0x0E;
 
 /// One-second sampling period, in microseconds — the cadence iOS uses for heart rate.
 pub const PERIOD_HEART_RATE_US: u32 = 1_000_000;
