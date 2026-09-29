@@ -181,6 +181,23 @@ jobs:
           path: dist
           if-no-files-found: error
 
+      # The two driver packages on their own (.inf + .sys + .cat, built above), for
+      # installing or updating just the drivers — e.g. drivers/aap/install.ps1.
+      - name: Collect driver packages
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force drivers-out/aap, drivers-out/mic | Out-Null
+          Copy-Item windows/drivers/aap/prebuilt/* drivers-out/aap -Exclude README.md
+          Copy-Item windows/drivers/mic/prebuilt/* drivers-out/mic -Exclude README.md
+          Get-ChildItem drivers-out -Recurse -File | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.Substring(0,16), $_.FullName }
+
+      - name: Upload driver artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: librepods-windows-drivers
+          path: drivers-out
+          if-no-files-found: error
+
       # ---- Releases --------------------------------------------------------
       # push to windows-native → rolling "windows-nightly" pre-release, rebuilt on
       #                          every push and pointing at that commit.
@@ -189,7 +206,9 @@ jobs:
       - name: Package release zip
         if: startsWith(github.ref, 'refs/tags/windows-v') || (github.event_name == 'push' && github.ref == 'refs/heads/windows-native')
         shell: pwsh
-        run: Compress-Archive -Path dist/* -DestinationPath LibrePods-Windows.zip
+        run: |
+          Compress-Archive -Path dist/* -DestinationPath LibrePods-Windows.zip
+          Compress-Archive -Path drivers-out/* -DestinationPath LibrePods-Windows-drivers.zip
 
       - name: Publish nightly pre-release
         if: github.event_name == 'push' && github.ref == 'refs/heads/windows-native'
@@ -206,8 +225,11 @@ jobs:
           Extract the zip, then in an **admin** PowerShell inside the folder:
           ``powershell -ExecutionPolicy Bypass -File .\install.ps1``
           (Test Mode must be on first — see windows/README.md.)
+
+          ``LibrePods-Windows-drivers.zip`` holds just the two driver packages (AAP + mic),
+          built from source in this run — the same ones the install folder carries.
           "@
-          gh release create windows-nightly LibrePods-Windows.zip `
+          gh release create windows-nightly LibrePods-Windows.zip LibrePods-Windows-drivers.zip `
             --target ${{ github.sha }} --prerelease --latest=false `
             --title "LibrePods for Windows (nightly)" --notes $notes
           if ($LASTEXITCODE) { throw "gh release create failed ($LASTEXITCODE)" }
@@ -218,7 +240,9 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: LibrePods for Windows ${{ github.ref_name }}
-          files: LibrePods-Windows.zip
+          files: |
+            LibrePods-Windows.zip
+            LibrePods-Windows-drivers.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
