@@ -1,0 +1,10 @@
+{\rtf1\ansi\deff0{\fonttbl{\f0\fswiss Segoe UI;}}\f0\fs18
+{\b\fs22 Before you install NTPods}\par\par
+NTPods uses two drivers of its own: one that talks to the AirPods and a virtual microphone. They are not signed by Microsoft, so this installer signs them with a test certificate made on this PC. Windows only loads drivers signed that way in {\b Test Mode}.\par\par
+If you got this far, Test Mode is already on. Keep it on while you use NTPods. Turning it off, or turning Secure Boot back on, stops the drivers from loading.\par\par
+The installer puts NTPods in Program Files, installs both drivers, and adds two scheduled tasks that NTPods uses to fix the driver and rename the microphone without asking for admin rights every time. Your settings and heart-rate history stay in %LOCALAPPDATA%\NTPods. Uninstalling removes the drivers, the tasks and the test certificate, and keeps that folder.\par\par
+Restart your PC when the installer asks, then connect your AirPods.\par\par
+{\b License}\par
+NTPods is free software under the GNU General Public License, version 3. You can use, study, share and change it. It comes with no warranty. Full text: https://www.gnu.org/licenses/gpl-3.0.html\par
+Source: https://github.com/arctumn/ntpods\par
+}

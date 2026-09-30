@@ -203,7 +203,8 @@ if (-not $ok -and $dev) {
 # ---- 5. bring the daemon back -----------------------------------------------
 if ($ok) {
     Log 'recovered without a reboot.'
-    $daemon = Join-Path $env:LOCALAPPDATA 'NTPods\ntpodsd.exe'
+    # Next to this script in both layouts (MSI: Program Files; install.ps1: %LOCALAPPDATA%).
+    $daemon = Join-Path $PSScriptRoot 'ntpodsd.exe'
     if (Test-Path $daemon) {
         Log '  restarting the daemon'
         Start-Process $daemon

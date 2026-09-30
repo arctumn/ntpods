@@ -50,9 +50,9 @@ and Linux.
 
 ## Installing on Windows
 
-Download `NTPods-Windows.zip` from the [nightly release](https://github.com/arctumn/ntpods/releases/tag/nightly), extract it and run
-`install.ps1` in an admin PowerShell. The drivers are only test-signed, so Windows
-has to be in Test Mode with Secure Boot turned off. Read the
+Download `NTPods.msi` from the [nightly release](https://github.com/arctumn/ntpods/releases/tag/nightly) and run it.
+The drivers are only test-signed, so Windows has to be in Test Mode with Secure
+Boot turned off first; the installer checks and tells you if it isn't. Read the
 [Windows README](windows/README.md) before you do this; it explains the risks and
 how to undo it.
 
