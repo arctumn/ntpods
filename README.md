@@ -48,7 +48,7 @@ and Linux.
 
 ## Installing on Windows
 
-Download `LibrePods-Windows.zip` from the latest release, extract it and run
+Download `NTPods-Windows.zip` from the [nightly release](https://github.com/arctumn/ntpods/releases/tag/nightly), extract it and run
 `install.ps1` in an admin PowerShell. The drivers are only test-signed, so Windows
 has to be in Test Mode with Secure Boot turned off. Read the
 [Windows README](windows/README.md) before you do this; it explains the risks and

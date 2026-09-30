@@ -40,9 +40,9 @@ shown depend on the model (e.g. only Pro/Max have noise control).
    You should see "Test Mode" in the bottom-right of the desktop.
 
 ### b) Install — the one-shot way (recommended)
-Download **`LibrePods-Windows.zip`** from the
-[`windows-nightly` release](https://github.com/arctumn/librepods/releases/tag/windows-nightly)
-(rebuilt on every push to `windows-native`; or build it yourself with
+Download **`NTPods-Windows.zip`** from the
+[`nightly` release](https://github.com/arctumn/ntpods/releases/tag/nightly)
+(rebuilt on every push to `main`; or build it yourself with
 [`installer/make-dist.ps1`](installer/make-dist.ps1)), extract it, and run
 [`installer/install.ps1`](installer/install.ps1) from an **admin** PowerShell
 inside the extracted folder:
