@@ -70,6 +70,8 @@ foreach ($old in 'lp-mic-rename.exe') {
 
 # ---- installer + helper scripts ---------------------------------------------
 Copy-Item (Join-Path $installer 'install.ps1')        $Out -Force
+Copy-Item (Join-Path $installer 'setup-common.ps1')   $Out -Force
+Copy-Item (Join-Path $installer 'msi-setup.ps1')      $Out -Force
 Copy-Item (Join-Path $installer 'fix-driver.ps1')     $Out -Force
 Copy-Item (Join-Path $win 'drivers\mic\rename-mic.ps1') $Out -Force
 Copy-Item (Join-Path $installer 'tools\*')            (Join-Path $Out 'tools') -Recurse -Force
@@ -95,7 +97,7 @@ if (-not (Test-Path $pri)) {
 
 # ---- completeness check: the user gets nothing but this folder --------------
 $required = @(
-    'install.ps1', 'fix-driver.ps1', 'rename-mic.ps1', 'tools\devcon.exe',
+    'install.ps1', 'setup-common.ps1', 'msi-setup.ps1', 'fix-driver.ps1', 'rename-mic.ps1', 'tools\devcon.exe',
     'driver\NTPodsAAP.inf', 'driver\NTPodsAAP.sys', 'driver\ntpodsaap.cat',
     'driver-mic\AudioCodec.inf', 'driver-mic\AudioCodec.sys', 'driver-mic\audiocodec.cat',
     'ntpodsd.exe', 'avcodec-61.dll', 'avutil-59.dll', 'swresample-5.dll',

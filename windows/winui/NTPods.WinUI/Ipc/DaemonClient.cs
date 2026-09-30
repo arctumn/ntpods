@@ -276,6 +276,8 @@ public sealed class DaemonClient : IDisposable
         string[] candidates =
         {
             Path.Combine(AppContext.BaseDirectory, DaemonExe),
+            // MSI layout: ntpodsd.exe sits one folder up, next to winui\.
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", DaemonExe)),
             Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "NTPods", DaemonExe),
