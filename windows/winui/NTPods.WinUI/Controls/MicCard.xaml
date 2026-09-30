@@ -11,7 +11,7 @@
     <Border Style="{StaticResource Card}">
         <StackPanel Spacing="8">
             <TextBlock Text="{Binding [MicTitle_Text], Source={StaticResource Loc}}" Style="{ThemeResource BodyStrongTextBlockStyle}" />
-            <TextBlock x:Name="MicStatusText"
+            <TextBlock x:Name="MicStatusText" TextWrapping="Wrap"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <ToggleSwitch OnContent="{Binding [Toggle_On], Source={StaticResource Loc}}" OffContent="{Binding [Toggle_Off], Source={StaticResource Loc}}" x:Name="MicAutoSwitch"
                           Header="{Binding [MicAutoSwitch_Header], Source={StaticResource Loc}}"

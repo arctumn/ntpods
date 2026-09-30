@@ -200,6 +200,7 @@ impl Ctx {
         let snap = {
             let mut s = self.state.lock().unwrap();
             s.mic_recording = self.mic_on.load(Ordering::Relaxed);
+            s.mic_available = self.pipe.is_open();
             s.auto_mode = self.auto_mode.load(Ordering::Relaxed);
             s.dev_name = self.dev_name.lock().unwrap().clone();
             s.clone()
@@ -2072,6 +2073,7 @@ fn main() {
         state: Arc::new(Mutex::new(Snapshot {
             dev_name: dev_name.clone(),
             auto_mode: true,
+            mic_available: pipe.is_open(),
             ..Default::default()
         })),
         clients: Arc::new(Mutex::new(Vec::new())),

@@ -1,3 +1,4 @@
+using System;
 using NTPods.WinUI.Ipc;
 using NTPods.WinUI.Services;
 using Microsoft.UI.Xaml;
@@ -29,9 +30,15 @@ public sealed partial class MicCard : UserControl
         try
         {
             _recording = s.MicRecording;
-            MicStatusText.Text = Localize.Get(s.MicRecording ? "Mic_Recording" : "Mic_Idle");
             MicAutoSwitch.IsOn = s.AutoMode;
             MicManualToggle.IsChecked = s.MicRecording && !s.AutoMode;
+            // No virtual mic driver: grey the controls out and say why. Before
+            // Windows 11 22H2 the ACX mic driver can't load at all.
+            MicAutoSwitch.IsEnabled = s.MicAvailable;
+            MicManualToggle.IsEnabled = s.MicAvailable;
+            MicStatusText.Text = Localize.Get(
+                s.MicAvailable ? (s.MicRecording ? "Mic_Recording" : "Mic_Idle")
+                : Environment.OSVersion.Version.Build < 22621 ? "Mic_NeedsWin11" : "Mic_NotLoaded");
         }
         finally
         {
