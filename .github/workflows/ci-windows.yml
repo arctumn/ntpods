@@ -7,7 +7,7 @@ name: Windows CI (frontend)
 # Windows SDK, no VC++ redistributable).
 #
 # The two kernel drivers (AAP L2CAP + hi-res mic) are built here from source with
-# the WDK (installed via winget — approach from the Gab4545/ntpods fork), their
+# the WDK (installed via winget — approach from the Gab4545/librepods fork), their
 # catalogs are regenerated, and the result overwrites windows/drivers/*/prebuilt so
 # the install folder always carries drivers that match the source. The committed
 # prebuilt packages remain for local installs; install.ps1 test-signs them on the
