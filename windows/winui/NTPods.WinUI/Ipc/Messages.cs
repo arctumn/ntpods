@@ -39,6 +39,8 @@ public sealed class Snapshot
     [JsonPropertyName("anc")] public byte Anc { get; set; }
 
     [JsonPropertyName("mic_recording")] public bool MicRecording { get; set; }
+    // Defaults to true so an older daemon (without the field) doesn't grey out the mic.
+    [JsonPropertyName("mic_available")] public bool MicAvailable { get; set; } = true;
     [JsonPropertyName("auto_mode")] public bool AutoMode { get; set; }
     [JsonPropertyName("conversational_awareness")] public bool ConversationalAwareness { get; set; }
     [JsonPropertyName("adaptive_volume")] public bool AdaptiveVolume { get; set; }

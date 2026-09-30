@@ -253,10 +253,83 @@ fn utf16_name(buf: &[u16]) -> String {
 /// case-insensitively against the paired device's name.
 const AAP_NAME_HINTS: &[&str] = &["airpod", "beats"];
 
-/// (address, display name) of the first paired device whose name matches a known
-/// AAP device (AirPods / Beats). The Windows " - Find My" suffix is stripped for
+/// Bluetooth addresses of every device Windows has published the AAP service for,
+/// i.e. every devnode under `Enum\BTHENUM\{74ec2172-...}_VID&...`. Those are the
+/// devices our AAP driver binds to, whatever the user has named them. The address
+/// is the 12 hex digits before `_C00000000` in the instance id, e.g.
+/// `7&3549f023&2&282D7FB83C8B_C00000000`. Readable without admin.
+fn aap_service_addresses() -> Vec<u64> {
+    use windows_sys::Win32::System::Registry::{
+        HKEY, HKEY_LOCAL_MACHINE, KEY_READ, RegCloseKey, RegEnumKeyExW, RegOpenKeyExW,
+    };
+    const BTHENUM: &str = r"SYSTEM\CurrentControlSet\Enum\BTHENUM";
+    const AAP_PREFIX: &str = "{74ec2172-0bad-4d01-8f77-997b2be0722a}";
+
+    unsafe fn subkeys(key: HKEY) -> Vec<String> {
+        let mut out = Vec::new();
+        let mut buf = [0u16; 256];
+        let mut i = 0;
+        loop {
+            let mut len = buf.len() as u32;
+            let r = RegEnumKeyExW(
+                key, i, buf.as_mut_ptr(), &mut len,
+                std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(),
+            );
+            if r != 0 {
+                break;
+            }
+            out.push(String::from_utf16_lossy(&buf[..len as usize]));
+            i += 1;
+        }
+        out
+    }
+    unsafe fn open(parent: HKEY, path: &str) -> Option<HKEY> {
+        let w: Vec<u16> = path.encode_utf16().chain(std::iter::once(0)).collect();
+        let mut k: HKEY = std::ptr::null_mut();
+        (RegOpenKeyExW(parent, w.as_ptr(), 0, KEY_READ, &mut k) == 0).then_some(k)
+    }
+
+    let mut addrs = Vec::new();
+    unsafe {
+        let Some(root) = open(HKEY_LOCAL_MACHINE, BTHENUM) else { return addrs };
+        for dev in subkeys(root) {
+            if !dev.to_ascii_lowercase().starts_with(AAP_PREFIX) {
+                continue;
+            }
+            if let Some(k) = open(root, &dev) {
+                for inst in subkeys(k) {
+                    let upper = inst.to_ascii_uppercase();
+                    if let Some(pos) = upper.rfind("_C00000000") {
+                        if pos >= 12 {
+                            if let Ok(a) = u64::from_str_radix(&upper[pos - 12..pos], 16) {
+                                if a != 0 && !addrs.contains(&a) {
+                                    addrs.push(a);
+                                }
+                            }
+                        }
+                    }
+                }
+                RegCloseKey(k);
+            }
+        }
+        RegCloseKey(root);
+    }
+    addrs
+}
+
+/// (address, display name) of the paired AirPods. Prefers a paired device that
+/// has the AAP service (see `aap_service_addresses`), so AirPods renamed to
+/// anything still work; falls back to a name match (AirPods / Beats) for when the
+/// AAP devnode isn't there yet. The Windows " - Find My" suffix is stripped for
 /// display.
 pub fn find_airpods() -> Option<(u64, String)> {
+    let aap = aap_service_addresses();
+    let clean = |name: &str| {
+        let n = name.trim_end_matches("- Find My").trim_end_matches(" -").trim();
+        if n.is_empty() { "AirPods".to_string() } else { n.to_string() }
+    };
+    let mut by_service = None;
+    let mut by_name = None;
     unsafe {
         let mut params: BLUETOOTH_DEVICE_SEARCH_PARAMS = zeroed();
         params.dwSize = size_of::<BLUETOOTH_DEVICE_SEARCH_PARAMS>() as u32;
@@ -272,26 +345,22 @@ pub fn find_airpods() -> Option<(u64, String)> {
         if h.is_null() {
             return None;
         }
-
-        let mut found = None;
         loop {
+            let addr = info.Address.Anonymous.ullLong;
             let name = utf16_name(&info.szName);
+            if by_service.is_none() && aap.contains(&addr) {
+                by_service = Some((addr, clean(&name)));
+            }
             let lname = name.to_lowercase();
-            if AAP_NAME_HINTS.iter().any(|h| lname.contains(h)) {
-                let clean = name
-                    .trim_end_matches("- Find My")
-                    .trim_end_matches(" -")
-                    .trim()
-                    .to_string();
-                found = Some((info.Address.Anonymous.ullLong, clean));
-                break;
+            if by_name.is_none() && AAP_NAME_HINTS.iter().any(|h| lname.contains(h)) {
+                by_name = Some((addr, clean(&name)));
             }
             info.dwSize = size_of::<BLUETOOTH_DEVICE_INFO>() as u32;
-            if BluetoothFindNextDevice(h, &mut info) == 0 {
+            if by_service.is_some() || BluetoothFindNextDevice(h, &mut info) == 0 {
                 break;
             }
         }
         BluetoothFindDeviceClose(h);
-        found
     }
+    by_service.or(by_name)
 }

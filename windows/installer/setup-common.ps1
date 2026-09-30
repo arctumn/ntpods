@@ -27,6 +27,11 @@ function Test-TestMode {
     $opts -match '\bTESTSIGNING\b'
 }
 
+# The virtual mic needs ACX 1.1 / KMDF 1.31: Windows 11 22H2 (build 22621) or newer.
+function Test-MicSupported {
+    [Environment]::OSVersion.Version.Build -ge 22621
+}
+
 # Run a native tool, echo its output, and fail on an exit code outside $ok.
 # (Native stderr must not become a terminating error under 'Stop', so the
 # preference is relaxed for the call itself.)
@@ -190,6 +195,13 @@ function Install-NTPodsDrivers([string]$root, [string]$work) {
     Write-Host '==> Removing any existing ROOT\AudioCodec (mic) device...'
     Invoke-Tool 'Removing the old mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\AudioCodec' }
     Start-Sleep -Seconds 1
+    # The mic driver is built on ACX 1.1 / KMDF 1.31, which only exist from
+    # Windows 11 22H2 (build 22621). On older Windows it installs "fine" and then
+    # never loads, so skip it and say why. Everything else works without it.
+    if (-not (Test-MicSupported)) {
+        Write-Host "==> Skipping NTPodsMic: it needs Windows 11 22H2 or newer (this is build $([Environment]::OSVersion.Version.Build)). Battery, noise control and the rest still work." -ForegroundColor Yellow
+        return
+    }
     Write-Host '==> Installing NTPodsMic (virtual microphone)...'
     # devcon: 0 = done, 1 = done but a reboot is needed.
     Invoke-Tool 'Installing NTPodsMic (devcon)' @(0, 1) { & $devcon install $mic.inf 'ROOT\AudioCodec' }

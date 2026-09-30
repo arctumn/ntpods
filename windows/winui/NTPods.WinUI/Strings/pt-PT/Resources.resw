@@ -201,6 +201,8 @@
 
   <data name="Mic_Recording" xml:space="preserve"><value>Em uso - a gravar em alta qualidade</value></data>
   <data name="Mic_Idle" xml:space="preserve"><value>Não está a ser usado</value></data>
+  <data name="Mic_NeedsWin11" xml:space="preserve"><value>Precisa do Windows 11 22H2 ou mais recente. O microfone Bluetooth normal dos AirPods continua a funcionar.</value></data>
+  <data name="Mic_NotLoaded" xml:space="preserve"><value>O driver do microfone do NTPods não está carregado. Reinstala o NTPods e reinicia.</value></data>
 
   <data name="Anc_Off" xml:space="preserve"><value>Desligado</value></data>
   <data name="Anc_NoiseCancellation" xml:space="preserve"><value>Cancelamento de Ruído</value></data>
