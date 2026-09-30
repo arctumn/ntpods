@@ -1,4 +1,10 @@
-# NTPodsMic — virtual audio (microphone) driver
+# NTPodsMic — virtual audio (microphone) driver (ACX, no longer shipped)
+
+> **Replaced by [`../mic-portcls`](../mic-portcls).** This ACX driver only loads on
+> Windows 11 22H2 or newer; the PortCls one does the same job on Windows 10 2004+
+> too, with the same `\\.\NTPodsMic` control device. The installer removes this
+> one (`ROOT\AudioCodec`) when it installs the new one. The code stays here for
+> reference.
 
 The virtual-microphone driver for the [hi-res mic feature](../../docs/hires-mic/PLAN.md):
 Windows sees a **NTPods** microphone that the daemon feeds with the AirPods'

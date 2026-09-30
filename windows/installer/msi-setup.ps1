@@ -33,6 +33,7 @@ try {
             Stop-NTPods
             Remove-LegacyLibrePods $UserSid $LocalAppData $AppData
             Remove-ZipInstall $LocalAppData $AppData
+            Remove-SetupLeftovers $LocalAppData
             if ($Drivers) {
                 if (-not (Test-TestMode)) { throw 'Test Mode is not active; the drivers would not load.' }
                 $work = Join-Path $env:ProgramData "NTPods\drivers-$(Get-Random)"

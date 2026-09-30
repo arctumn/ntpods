@@ -19,7 +19,10 @@
     installed — the drivers are signed with PowerShell's own Authenticode support.
 
     Usage (elevated):  powershell -ExecutionPolicy Bypass -File .\install.ps1
+    With BitLocker on it asks you to confirm the recovery key is saved; -Yes
+    skips that question (unattended installs).
 #>
+param([switch]$Yes)
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $here 'setup-common.ps1')
@@ -28,19 +31,36 @@ $sid = Get-CurrentUserSid
 
 # ---- 0. preflight: fail BEFORE touching certificates or drivers -------------
 if (-not (Test-Admin)) { throw 'Run this from an ADMINISTRATOR PowerShell.' }
+$bitlocker = Test-BitLocker
 if (-not (Test-TestMode)) {
-    throw @'
+    $secureBoot = switch (Test-SecureBoot) {
+        $true { 'Secure Boot is ON on this PC, so turn it off first.' }
+        $false { 'Secure Boot is already off.' }
+        default { "Couldn't read the Secure Boot state." }
+    }
+    $bl = if ($bitlocker) { "BitLocker is ON for $env:SystemDrive. $script:BitLockerAdvice" } else { 'BitLocker is off for the system drive.' }
+    throw @"
 Test Mode is not active, so Windows would refuse to load the NTPods drivers.
-  1. Back up your BitLocker recovery key (if BitLocker is on).
+  1. $bl
   2. Disable Secure Boot in your firmware/BIOS (while it is on, bcdedit refuses).
+     $secureBoot
   3. In an admin PowerShell:  bcdedit /set testsigning on
   4. Reboot ("Test Mode" shows in the bottom-right corner), then run this again.
-'@
+"@
+}
+# Test Mode is on, but whoever turns it (or Secure Boot) back off later hits the
+# same BitLocker prompt, so make sure the key is saved before going further.
+if ($bitlocker) {
+    Write-Host "BitLocker is ON for $env:SystemDrive.`n$script:BitLockerAdvice" -ForegroundColor Yellow
+    if (-not $Yes) {
+        $a = Read-Host 'Is your BitLocker recovery key saved somewhere other than this PC? (y/N)'
+        if ($a -notmatch '^(y|yes|s|sim)$') { throw 'Stopped: save the BitLocker recovery key first, then run this again.' }
+    }
 }
 
 $required = @(
     'driver\NTPodsAAP.sys', 'driver\ntpodsaap.cat', 'driver\NTPodsAAP.inf',
-    'driver-mic\AudioCodec.sys', 'driver-mic\audiocodec.cat', 'driver-mic\AudioCodec.inf',
+    'driver-mic\NTPodsMicPC.sys', 'driver-mic\ntpodsmicpc.cat', 'driver-mic\NTPodsMicPC.inf',
     'tools\devcon.exe', 'ntpodsd.exe', 'avcodec-61.dll', 'avutil-59.dll', 'swresample-5.dll',
     'winui\ntpods-winui.exe', 'fix-driver.ps1', 'rename-mic.ps1'
 ) | ForEach-Object { Join-Path $here $_ }
@@ -52,9 +72,12 @@ if ($missing) {
 # ---- 1. take over an older LibrePods install ---------------------------------
 Stop-NTPods
 Remove-LegacyLibrePods $sid $env:LOCALAPPDATA $env:APPDATA
+Remove-SetupLeftovers $env:LOCALAPPDATA
 
 # ---- 2. both drivers (test-signed here, then pnputil / devcon) ---------------
-Install-NTPodsDrivers $here (Join-Path $env:TEMP "NTPods-drivers-$(Get-Random)")
+$work = Join-Path $env:TEMP "NTPods-drivers-$(Get-Random)"
+try { Install-NTPodsDrivers $here $work }
+finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
 
 # ---- 3. copy the apps -------------------------------------------------------
 # The daemon owns the driver + AAP session + mic; the WinUI app is its IPC client.

@@ -27,9 +27,36 @@ function Test-TestMode {
     $opts -match '\bTESTSIGNING\b'
 }
 
-# The virtual mic needs ACX 1.1 / KMDF 1.31: Windows 11 22H2 (build 22621) or newer.
+# Secure Boot on means bcdedit refuses `testsigning on`, so it's worth naming when
+# Test Mode is off. $null when it can't be read (legacy BIOS, or not elevated).
+function Test-SecureBoot {
+    try { Confirm-SecureBootUEFI -ErrorAction Stop } catch { $null }
+}
+
+# BitLocker protection on the system drive. Changing Secure Boot or the boot
+# options (testsigning) can make it ask for the recovery key at the next boot.
+# WMI rather than Get-BitLockerVolume (missing on some editions) or manage-bde
+# (its output is translated). Needs admin; $false when it can't be read.
+function Test-BitLocker {
+    try {
+        $v = Get-CimInstance -Namespace 'root\CIMV2\Security\MicrosoftVolumeEncryption' `
+            -ClassName Win32_EncryptableVolume -Filter "DriveLetter='$env:SystemDrive'" -ErrorAction Stop
+        [bool]($v | Where-Object { $_.ProtectionStatus -eq 1 })
+    } catch { $false }
+}
+
+$script:BitLockerAdvice = @'
+Save your BitLocker recovery key before changing Secure Boot or Test Mode:
+changing either can make Windows ask for it at the next boot, and without it
+you lose access to this drive. Find it at https://aka.ms/myrecoverykey (if it
+is saved to your Microsoft account) or print it from an admin terminal with:
+  manage-bde -protectors -get C:
+'@
+
+# The virtual mic (PortCls) needs Windows 10 2004 (build 19041) or newer, the
+# floor its INF declares (ExAllocatePool2).
 function Test-MicSupported {
-    [Environment]::OSVersion.Version.Build -ge 22621
+    [Environment]::OSVersion.Version.Build -ge 19041
 }
 
 # Run a native tool, echo its output, and fail on an exit code outside $ok.
@@ -121,6 +148,27 @@ function Remove-LegacyLibrePods([string]$userSid, [string]$localAppData, [string
     }
     Remove-TestCert 'CN=LibrePods Test Cert'
     if (Test-Path $legacy) { Remove-Item $legacy -Recurse -Force -ErrorAction SilentlyContinue }
+    # The old tray app kept a device list in %APPDATA%\LibrePods; nothing reads it now.
+    Remove-Item (Join-Path $appData 'LibrePods') -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# Folders earlier installs left behind: driver work folders from an install that
+# didn't clean up after itself (every zip install before this one), and the
+# package folders of the old per-driver scripts. $localAppData\Temp is the user's
+# %TEMP%, which the MSI (running as SYSTEM) can't get from its own environment.
+function Remove-SetupLeftovers([string]$localAppData) {
+    $temps = @((Join-Path $localAppData 'Temp'), $env:TEMP) | Select-Object -Unique
+    foreach ($t in $temps) {
+        Get-ChildItem $t -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like 'NTPods-drivers-*' -or $_.Name -like 'LibrePods-drivers-*' -or
+                           $_.Name -in 'NTPodsMicPkg', 'LibrePodsMicPkg' } |
+            ForEach-Object {
+                Write-Host "==> Removing leftover $($_.FullName)"
+                Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+            }
+    }
+    Get-ChildItem (Join-Path $env:ProgramData 'NTPods') -Directory -Filter 'drivers-*' -ErrorAction SilentlyContinue |
+        ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
 # A zip install (install.ps1) keeps the programs in %LOCALAPPDATA%\NTPods and
@@ -149,7 +197,7 @@ function Install-NTPodsDrivers([string]$root, [string]$work) {
         Copy-Item (Join-Path $root $d) $work -Recurse -Force
     }
     $aap = @{ sys = Join-Path $work 'driver\NTPodsAAP.sys'; cat = Join-Path $work 'driver\ntpodsaap.cat'; inf = Join-Path $work 'driver\NTPodsAAP.inf' }
-    $mic = @{ sys = Join-Path $work 'driver-mic\AudioCodec.sys'; cat = Join-Path $work 'driver-mic\audiocodec.cat'; inf = Join-Path $work 'driver-mic\AudioCodec.inf' }
+    $mic = @{ sys = Join-Path $work 'driver-mic\NTPodsMicPC.sys'; cat = Join-Path $work 'driver-mic\ntpodsmicpc.cat'; inf = Join-Path $work 'driver-mic\NTPodsMicPC.inf' }
 
     # Test code-signing cert, trusted for driver loading. Reuse the one from an
     # earlier run instead of piling up a new one every time.
@@ -191,32 +239,34 @@ function Install-NTPodsDrivers([string]$root, [string]$work) {
     # 259 = added, but no matching device yet (AirPods not paired); 3010 = reboot needed.
     Invoke-Tool 'Installing NTPodsAAP (pnputil)' @(0, 259, 3010) { pnputil /add-driver $aap.inf /install }
 
-    # NTPodsMic: ROOT-enumerated device, via devcon.
-    Write-Host '==> Removing any existing ROOT\AudioCodec (mic) device...'
-    Invoke-Tool 'Removing the old mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\AudioCodec' }
+    # NTPodsMic: ROOT-enumerated device, via devcon. Older releases shipped an ACX
+    # mic (ROOT\AudioCodec, Windows 11 22H2+ only); remove it too so the two never
+    # show up side by side.
+    Write-Host '==> Removing any existing mic device...'
+    Invoke-Tool 'Removing the old mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\NTPodsMicPC' }
+    Invoke-Tool 'Removing the old ACX mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\AudioCodec' }
     # Old mic packages pile up in the driver store otherwise (one per install).
     Remove-MicDriverPackages
     Start-Sleep -Seconds 1
-    # The mic driver is built on ACX 1.1 / KMDF 1.31, which only exist from
-    # Windows 11 22H2 (build 22621). On older Windows it installs "fine" and then
-    # never loads (Code 37), so skip it and say why. An older NTPods that installed
-    # it anyway is cleaned up by the two steps above. Everything else works without it.
+    # On older Windows the INF has no matching section and the device would never
+    # start, so skip it and say why. Everything else works without it.
     if (-not (Test-MicSupported)) {
-        Write-Host "==> Skipping NTPodsMic: it needs Windows 11 22H2 or newer (this is build $([Environment]::OSVersion.Version.Build)). Battery, noise control and the rest still work." -ForegroundColor Yellow
+        Write-Host "==> Skipping NTPodsMic: it needs Windows 10 2004 or newer (this is build $([Environment]::OSVersion.Version.Build)). Battery, noise control and the rest still work." -ForegroundColor Yellow
         return
     }
     Write-Host '==> Installing NTPodsMic (virtual microphone)...'
     # devcon: 0 = done, 1 = done but a reboot is needed.
-    Invoke-Tool 'Installing NTPodsMic (devcon)' @(0, 1) { & $devcon install $mic.inf 'ROOT\AudioCodec' }
-    $micDev = Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.HardwareID -contains 'ROOT\AudioCodec' }
-    if (-not $micDev) { throw 'devcon reported success, but no ROOT\AudioCodec device exists.' }
+    Invoke-Tool 'Installing NTPodsMic (devcon)' @(0, 1) { & $devcon install $mic.inf 'ROOT\NTPodsMicPC' }
+    $micDev = Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.HardwareID -contains 'ROOT\NTPodsMicPC' }
+    if (-not $micDev) { throw 'devcon reported success, but no ROOT\NTPodsMicPC device exists.' }
 }
 
 function Uninstall-NTPodsDrivers([string]$root) {
     $devcon = Join-Path $root 'tools\devcon.exe'
     if (Test-Path $devcon) {
         Write-Host '==> Removing the NTPods microphone device...'
-        Invoke-Tool 'Removing the mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\AudioCodec' }
+        Invoke-Tool 'Removing the mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\NTPodsMicPC' }
+        Invoke-Tool 'Removing the old ACX mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\AudioCodec' }
     }
     foreach ($oem in (Get-DriverPackages 'NTPodsAAP.inf')) {
         Write-Host "==> Removing driver package $oem (NTPodsAAP.inf)"
@@ -226,13 +276,16 @@ function Uninstall-NTPodsDrivers([string]$root) {
     Remove-TestCert 'CN=NTPods Test Cert'
 }
 
-# Remove the mic driver packages from the driver store. The mic INF is named after
-# the WDK sample it came from, so match the provider too; older builds still
-# carried the sample's VS_Microsoft / LibrePods.
+# Remove every mic driver package from the driver store: the current PortCls one
+# and the old ACX one. The ACX INF is named after the WDK sample it came from, so
+# match the provider too; older builds still carried the sample's VS_Microsoft /
+# LibrePods.
 function Remove-MicDriverPackages {
-    foreach ($oem in (Get-DriverPackages 'audiocodec.inf' @('NTPods', 'LibrePods', 'VS_Microsoft'))) {
-        Write-Host "==> Removing driver package $oem (audiocodec.inf)"
-        pnputil /delete-driver $oem /uninstall /force | Out-Null
+    foreach ($p in @(@('NTPodsMicPC.inf', $null), @('audiocodec.inf', @('NTPods', 'LibrePods', 'VS_Microsoft')))) {
+        foreach ($oem in (Get-DriverPackages $p[0] $p[1])) {
+            Write-Host "==> Removing driver package $oem ($($p[0]))"
+            pnputil /delete-driver $oem /uninstall /force | Out-Null
+        }
     }
 }
 

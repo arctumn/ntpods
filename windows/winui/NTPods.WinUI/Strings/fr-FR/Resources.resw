@@ -201,7 +201,7 @@
 
   <data name="Mic_Recording" xml:space="preserve"><value>Utilisé - enregistrement en haute qualité</value></data>
   <data name="Mic_Idle" xml:space="preserve"><value>Non utilisé</value></data>
-  <data name="Mic_NeedsWin11" xml:space="preserve"><value>Nécessite Windows 11 22H2 ou plus récent. Le micro Bluetooth normal des AirPods fonctionne toujours.</value></data>
+  <data name="Mic_NeedsNewerWindows" xml:space="preserve"><value>Nécessite Windows 10 2004 ou plus récent. Le micro Bluetooth normal des AirPods fonctionne toujours.</value></data>
   <data name="Mic_NotLoaded" xml:space="preserve"><value>Le pilote du micro NTPods n'est pas chargé. Réinstallez NTPods, puis redémarrez.</value></data>
 
   <data name="Anc_Off" xml:space="preserve"><value>Désactivé</value></data>

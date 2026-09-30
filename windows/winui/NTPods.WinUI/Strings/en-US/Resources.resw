@@ -210,7 +210,7 @@
 
   <data name="Mic_Recording" xml:space="preserve"><value>In use - recording in high quality</value></data>
   <data name="Mic_Idle" xml:space="preserve"><value>Not in use</value></data>
-  <data name="Mic_NeedsWin11" xml:space="preserve"><value>Needs Windows 11 22H2 or newer. The AirPods' normal Bluetooth mic still works.</value></data>
+  <data name="Mic_NeedsNewerWindows" xml:space="preserve"><value>Needs Windows 10 2004 or newer. The AirPods' normal Bluetooth mic still works.</value></data>
   <data name="Mic_NotLoaded" xml:space="preserve"><value>The NTPods mic driver isn't loaded. Reinstall NTPods, then restart.</value></data>
 
   <data name="Anc_Off" xml:space="preserve"><value>Off</value></data>

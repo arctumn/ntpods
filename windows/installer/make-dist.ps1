@@ -73,12 +73,18 @@ Copy-Item (Join-Path $installer 'install.ps1')        $Out -Force
 Copy-Item (Join-Path $installer 'setup-common.ps1')   $Out -Force
 Copy-Item (Join-Path $installer 'msi-setup.ps1')      $Out -Force
 Copy-Item (Join-Path $installer 'fix-driver.ps1')     $Out -Force
-Copy-Item (Join-Path $win 'drivers\mic\rename-mic.ps1') $Out -Force
+Copy-Item (Join-Path $installer 'rename-mic.ps1')     $Out -Force
 Copy-Item (Join-Path $installer 'tools\*')            (Join-Path $Out 'tools') -Recurse -Force
 
 # ---- driver packages (prebuilt with catalogs, so no WDK is needed to install) -
 Copy-Item (Join-Path $win 'drivers\aap\prebuilt\*') (Join-Path $Out 'driver') -Force
-Copy-Item (Join-Path $win 'drivers\mic\prebuilt\*') (Join-Path $Out 'driver-mic') -Force
+# The mic package isn't committed: CI builds it into this folder before running
+# this script. Locally, build it (and its catalog) the same way first.
+$micPkg = Join-Path $win 'drivers\mic-portcls\prebuilt'
+if (-not (Test-Path (Join-Path $micPkg 'NTPodsMicPC.sys'))) {
+    throw "No mic driver package in $micPkg. Build drivers\mic-portcls and run inf2cat into that folder (see the 'Regenerate driver catalogs' step in .github/workflows/ci-windows.yml), or take driver-mic\ from a release zip."
+}
+Copy-Item (Join-Path $micPkg '*') (Join-Path $Out 'driver-mic') -Force
 Get-ChildItem (Join-Path $Out 'driver'), (Join-Path $Out 'driver-mic') -Filter 'README.md' |
     Remove-Item -Force -ErrorAction SilentlyContinue
 
@@ -99,7 +105,7 @@ if (-not (Test-Path $pri)) {
 $required = @(
     'install.ps1', 'setup-common.ps1', 'msi-setup.ps1', 'fix-driver.ps1', 'rename-mic.ps1', 'tools\devcon.exe',
     'driver\NTPodsAAP.inf', 'driver\NTPodsAAP.sys', 'driver\ntpodsaap.cat',
-    'driver-mic\AudioCodec.inf', 'driver-mic\AudioCodec.sys', 'driver-mic\audiocodec.cat',
+    'driver-mic\NTPodsMicPC.inf', 'driver-mic\NTPodsMicPC.sys', 'driver-mic\ntpodsmicpc.cat',
     'ntpodsd.exe', 'avcodec-61.dll', 'avutil-59.dll', 'swresample-5.dll',
     'winui\ntpods-winui.exe', 'winui\ntpods-winui.pri'
 )
@@ -109,7 +115,7 @@ if ($missing) { throw "Dist is incomplete, missing: $($missing -join ', ')" }
 # Each driver catalog stores the flat SHA1/SHA256 of its INF. If the INF was
 # edited (or line-ending-converted) after inf2cat ran, the package won't install.
 foreach ($pkg in @(@('driver\NTPodsAAP.inf', 'driver\ntpodsaap.cat'),
-                   @('driver-mic\AudioCodec.inf', 'driver-mic\audiocodec.cat'))) {
+                   @('driver-mic\NTPodsMicPC.inf', 'driver-mic\ntpodsmicpc.cat'))) {
     $catHex = [BitConverter]::ToString([IO.File]::ReadAllBytes((Join-Path $Out $pkg[1]))).Replace('-', '')
     $inf = Join-Path $Out $pkg[0]
     $inCat = @('SHA1', 'SHA256') | Where-Object { $catHex.Contains((Get-FileHash $inf -Algorithm $_).Hash) }
