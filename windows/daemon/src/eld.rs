@@ -17,7 +17,7 @@ extern "C" {
 }
 
 /// AudioSpecificConfig for the AirPods hi-res mic: AOT 39 (ER AAC ELD), 48 kHz,
-/// mono. From LibrePods PR #655.
+/// mono. Taken from LibrePods PR #655.
 const ASC: [u8; 4] = [0xF8, 0xE6, 0x30, 0x00];
 const SAMPLE_RATE: c_int = 48_000;
 

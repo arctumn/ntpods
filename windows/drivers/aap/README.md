@@ -10,7 +10,7 @@ opens that channel in kernel mode and bridges it to user space via
 ## How it binds (the key trick)
 
 AirPods advertise an SDP service with UUID `{74ec2172-0bad-4d01-8f77-997b2be0722a}`
-(the same one LibrePods uses on Linux). Windows enumerates a devnode
+(taken from LibrePods on Linux). Windows enumerates a devnode
 `BTHENUM\{74ec2172-...}_VID&0001004c_PID&2027` for it. Our INF matches that
 hardware ID, so Windows loads this driver as the **function driver for the AAP
 service PDO** — with the Bluetooth stack as its parent I/O target. From there we
