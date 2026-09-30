@@ -112,6 +112,11 @@ bcdedit /set testsigning off                    # then re-enable Secure Boot in 
 The app's data (settings, logs, the heart-rate history) lives in
 `%LOCALAPPDATA%\NTPods` — delete that folder to remove it too.
 
+### Something doesn't work?
+Open a [bug report](https://github.com/arctumn/ntpods/issues/new?template=bug_report.yml).
+The form has a PowerShell command that collects the logs and device status into
+one file, so I can see what went wrong without a back-and-forth.
+
 ---
 
 ## 2. Run the app

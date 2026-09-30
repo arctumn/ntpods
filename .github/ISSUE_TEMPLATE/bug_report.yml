@@ -1,0 +1,97 @@
+name: Bug report
+description: Something doesn't work (connecting, battery, noise control, mic, heart rate, installer...)
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please fill in what you can, and attach the report file from the last step. It's what lets me see what went wrong, so without it I'll usually have to ask for it first.
+
+        Quick checks before you start:
+        - Test Mode is on (it says "Test Mode" in the bottom-right corner of the desktop).
+        - The AirPods are paired in **Settings > Bluetooth & devices**. NTPods doesn't pair anything itself.
+        - Their name still has "AirPods" in it (or "Beats").
+        - You restarted after installing.
+
+  - type: dropdown
+    id: model
+    attributes:
+      label: AirPods model
+      options:
+        - AirPods (1st gen)
+        - AirPods (2nd gen)
+        - AirPods (3rd gen)
+        - AirPods 4
+        - AirPods 4 (ANC)
+        - AirPods Pro (1st gen)
+        - AirPods Pro 2 (Lightning)
+        - AirPods Pro 2 (USB-C)
+        - AirPods Pro 3
+        - AirPods Max
+        - Beats (write which in the description)
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install NTPods?
+      options:
+        - NTPods.msi
+        - NTPods-Windows.zip with install.ps1
+        - Built it myself
+        - Old LibrePods for Windows build
+    validations:
+      required: true
+
+  - type: input
+    id: firmware
+    attributes:
+      label: AirPods firmware (if you know it)
+      description: On an iPhone, Settings > [your AirPods] > About. Leave empty if you don't know.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got instead. Screenshots help.
+      placeholder: |
+        I installed the MSI, restarted and paired the AirPods, but the app stays on "Disconnected"...
+    validations:
+      required: true
+
+  - type: textarea
+    id: report
+    attributes:
+      label: Report file
+      description: |
+        Open a normal PowerShell window (no admin needed) and paste the command below. It only reads things, writes `ntpods-report.txt` to your Desktop and opens it. Drag that file into this box.
+
+        It has your AirPods' Bluetooth address and device names in it. Your Windows user name is replaced with `<user>`. Have a look before you post it.
+
+        ```powershell
+        $o = "$env:USERPROFILE\Desktop\ntpods-report.txt"
+        & {
+          "== windows"; [Environment]::OSVersion.VersionString; (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').DisplayVersion
+          "== boot options"; (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control').SystemStartOptions
+          "== ntpods version"; Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object DisplayName -match 'NTPods' | Select-Object DisplayName, DisplayVersion, InstallDate | Format-List | Out-String
+          "== bluetooth"; Get-PnpDevice -Class Bluetooth | Select-Object Status, FriendlyName, InstanceId | Format-Table -AutoSize | Out-String -Width 300
+          "== ntpods devices"; Get-PnpDevice | Where-Object { $_.FriendlyName -match 'NTPods|LibrePods|AirPods|Beats' } | Select-Object Status, Class, FriendlyName, Problem | Format-Table -AutoSize | Out-String -Width 300
+          "== processes"; Get-Process ntpods*, librepods* -ErrorAction SilentlyContinue | Select-Object Name, Path | Format-Table -AutoSize | Out-String -Width 300
+          "== tasks"; Get-ScheduledTask | Where-Object TaskName -match 'NTPods|LibrePods' | Select-Object TaskName, State | Format-Table -AutoSize | Out-String
+          "== setup.log"; Get-Content "$env:ProgramData\NTPods\setup.log" -Tail 80 -ErrorAction SilentlyContinue
+          "== daemon.log"; Get-Content "$env:LOCALAPPDATA\NTPods\daemon.log" -Tail 200 -ErrorAction SilentlyContinue
+          "== rename.log"; Get-Content "$env:LOCALAPPDATA\NTPods\rename.log" -Tail 20 -ErrorAction SilentlyContinue
+          "== fix-driver.log"; Get-Content "$env:LOCALAPPDATA\NTPods\fix-driver.log" -Tail 40 -ErrorAction SilentlyContinue
+        } *>&1 | Out-String -Width 300 | ForEach-Object { if ($env:USERNAME.Length -ge 3) { $_ -replace [regex]::Escape($env:USERNAME), '<user>' } else { $_ } } | Set-Content $o -Encoding UTF8
+        notepad $o
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Other Bluetooth devices connected, laptop model, whether it ever worked before, etc.

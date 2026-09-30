@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Windows install guide
+    url: https://github.com/arctumn/ntpods/blob/main/windows/README.md
+    about: Test Mode, installing, uninstalling. Worth a read before opening an issue.
