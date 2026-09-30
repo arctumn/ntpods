@@ -1,84 +1,75 @@
 # NTPods
 
-Open-source AirPods control for the PC: battery, noise control, ear detection,
-conversational awareness, the AirPods' **hi-res microphone as a real input**,
-**heart-rate monitoring** (AirPods Pro 3), hearing aid and more — free, with the
-kernel drivers included.
+Control your AirPods from a Windows PC: battery, noise control, ear detection,
+conversational awareness, the hi-res microphone as a normal input, heart rate on
+AirPods Pro 3, and a few more things. It's free and open source, drivers included.
 
 > [!NOTE]
-> **Transition in progress.** NTPods started as the Windows port of
-> [LibrePods](https://github.com/kavishdevar/librepods) (developed in the
-> [arctumn/librepods](https://github.com/arctumn/librepods) fork). At the LibrePods
-> maintainer's request it continues as its own project, under its own name. Until
-> the rename lands, the code, the app and the release still say "LibrePods" in
-> places — that is expected. Please report NTPods issues **here**, not to LibrePods.
+> NTPods started as the Windows port of [LibrePods](https://github.com/kavishdevar/librepods),
+> in my fork [arctumn/librepods](https://github.com/arctumn/librepods). The LibrePods
+> maintainer asked me to give it its own name, so it lives here now. Some parts
+> of the code and the release still say "LibrePods" until I finish renaming.
+> Please open issues here, not on LibrePods.
 
 ## Platforms
 
-| Platform | Status | Where |
-|---|---|---|
-| **Windows 10 / 11** | ✅ native WinUI 3 app + daemon + two kernel drivers | [`windows/`](windows/README.md) |
-| WSL / Linux | planned — the layout leaves room for it next to `windows/` | — |
+Right now it's Windows 10/11 only (everything is in [`windows/`](windows/README.md)).
+I'd like to add WSL/Linux later, which is why the Windows code sits in its own folder.
 
-For Android and Linux today, use [LibrePods](https://github.com/kavishdevar/librepods).
+On Android or Linux, use [LibrePods](https://github.com/kavishdevar/librepods).
 
-## How it compares
+## Compared to LibrePods and MagicPods
 
-A fair-as-we-can snapshot (Sept 2026), from each project's own README, store page and docs — corrections welcome.
-✓ yes · ◐ partial / experimental · — no.
+Based on each project's README and store page as of September 2026. If something
+here is wrong, open an issue and I'll fix it.
 
-| | **NTPods** | [LibrePods](https://github.com/kavishdevar/librepods) | [MagicPods](https://magicpods.app/) |
+| | NTPods | [LibrePods](https://github.com/kavishdevar/librepods) | [MagicPods](https://magicpods.app/) |
 |---|---|---|---|
-| Platforms | Windows (WSL/Linux planned) | Android, Linux | Windows, Steam Deck (Linux) |
-| Price / license | **Free, GPL-3.0 — app and both kernel drivers** | Free, GPL-3.0 | Paid on the Microsoft Store; app source open, AAP driver separate |
-| Battery (L / R / case) | ✓ | ✓ | ✓ |
-| Noise control (Off / ANC / Transparency / Adaptive) | ✓ | ✓ | ✓ |
-| Ear detection auto-pause | ✓ | ✓ | ✓ |
-| Conversational Awareness | ✓ | ✓ | ✓ |
-| Adaptive noise strength, Allow-Off, Adaptive / Personalized Volume | ✓ | ✓ (Android) | ◐ |
-| **Hi-res AirPods microphone** as a system input | ✓ (own virtual mic driver) | — | — (system HFP, 16 kHz) |
-| **Heart rate** (AirPods Pro 3) | ✓ live BPM, graph, session history | ◐ in development (PR #702) | — |
-| Hearing-aid audiogram | ◐ experimental | ◐ Android (needs VendorID spoofing) | — |
-| Head gestures | — | ✓ (Android) | — |
-| Other earbuds (Galaxy Buds, Beats, Nothing…) | — | ◐ (Linux: Nothing) | ✓ |
-| Low-latency gaming mode | — | — | ✓ |
-| Needs Windows Test Mode | yes (test-signed drivers) | n/a | Store build: no; open build: yes |
+| Platforms | Windows | Android, Linux | Windows, Steam Deck |
+| Price | Free (GPL-3.0, drivers too) | Free (GPL-3.0) | Paid (Microsoft Store) |
+| Battery | yes | yes | yes |
+| Noise control | yes | yes | yes |
+| Ear detection | yes | yes | yes |
+| Conversational awareness | yes | yes | yes |
+| Adaptive / personalized volume, allow off | yes | Android | partial |
+| Hi-res mic as a system input | yes | no | no |
+| Heart rate (AirPods Pro 3) | yes | in progress (PR #702) | no |
+| Hearing aid | experimental | Android, needs VendorID spoofing | no |
+| Head gestures | no | Android | no |
+| Other earbuds | no | Nothing (Linux) | yes |
+| Low-latency mode | no | no | yes |
+| Needs Test Mode on Windows | yes | n/a | no (Store version) |
 
-Where the others are ahead is stated plainly: MagicPods has multi-vendor support, a
-low-latency mode and a signed build that runs without Test Mode; LibrePods covers
-Android and Linux and has head gestures. NTPods' edge on Windows: fully free and
-open — drivers included — with the hi-res mic and heart rate.
+MagicPods is the better pick if you use non-Apple earbuds, want a low-latency mode,
+or don't want to turn on Test Mode. LibrePods is what you want on Android and Linux.
 
-## Get it (Windows)
+## Installing on Windows
 
 Download `LibrePods-Windows.zip` from the latest release, extract it and run
-`install.ps1` from an **admin** PowerShell. The drivers are test-signed, so Windows
-must be in **Test Mode** (Secure Boot off) — read the
-[Windows README](windows/README.md) first; it covers the risks, install, uninstall
-and every feature.
+`install.ps1` in an admin PowerShell. The drivers are only test-signed, so Windows
+has to be in Test Mode with Secure Boot turned off. Read the
+[Windows README](windows/README.md) before you do this; it explains the risks and
+how to undo it.
 
-## Repository layout
+## What's in the repo
 
-- [`windows/`](windows) — everything Windows: the AAP L2CAP and virtual-mic
-  drivers, the `librepodsd` daemon (Rust), the WinUI 3 app (C#), the installer.
-- [`docs/`](docs), [`AAP Definitions.md`](AAP%20Definitions.md) — the AirPods
-  protocol notes, shared by every platform.
-- [`.github/workflows/ci-windows.yml`](.github/workflows/ci-windows.yml) — builds
-  both drivers, the daemon and the app from source and publishes the release zip.
+- `windows/`: the two drivers (AAP channel and virtual mic), the daemon (Rust), the
+  WinUI app (C#) and the installer
+- `docs/` and `AAP Definitions.md`: notes on the AirPods protocol
+- `.github/workflows/ci-windows.yml`: builds everything and publishes the release
 
 ## Credits
 
-- **[LibrePods](https://github.com/kavishdevar/librepods)** by
-  [kavishdevar](https://github.com/kavishdevar) and contributors — the reverse-
-  engineered AirPods protocol this project is built on, and where it started.
-  NTPods is not affiliated with LibrePods.
-- Heart rate: [@thibaup](https://github.com/thibaup)'s Android implementation
-  (LibrePods PR #702) and [@SAGIRIxr](https://github.com/SAGIRIxr)'s findings.
-- Driver builds in CI: the WDK-via-winget approach from
-  [@Gab4545](https://github.com/Gab4545)'s fork.
-- Protocol dissectors: [pabloaul/apple-wireshark](https://github.com/pabloaul/apple-wireshark).
+- [LibrePods](https://github.com/kavishdevar/librepods) by
+  [kavishdevar](https://github.com/kavishdevar) and its contributors. The protocol
+  work this is built on comes from there. NTPods isn't affiliated with LibrePods.
+- [@thibaup](https://github.com/thibaup) (heart rate on Android, LibrePods PR #702)
+  and [@SAGIRIxr](https://github.com/SAGIRIxr) for their heart-rate findings.
+- [@Gab4545](https://github.com/Gab4545) for building the drivers in CI.
+- [pabloaul/apple-wireshark](https://github.com/pabloaul/apple-wireshark) for the
+  Wireshark dissectors.
 
 ## License
 
-[GPL-3.0](LICENSE), like LibrePods. AirPods is a trademark of Apple Inc.; NTPods
-is not affiliated with or endorsed by Apple.
+GPL-3.0, same as LibrePods. AirPods is a trademark of Apple Inc. This project isn't
+affiliated with Apple.
