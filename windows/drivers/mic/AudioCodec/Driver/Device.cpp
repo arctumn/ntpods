@@ -179,14 +179,14 @@ Return Value:
     // device context. These circuits will be added to the device when the
     // prepare hardware callback is called. 
     //
-    // LibrePodsMic is capture-only (a virtual microphone). No render/speaker
+    // NTPodsMic is capture-only (a virtual microphone). No render/speaker
     // circuit — so Windows never exposes a phantom output device that could grab
     // the default output.
     RETURN_NTSTATUS_IF_FAILED(CodecC_AddStaticCapture(device, &CODEC_CAPTURE_COMPONENT_GUID, &MIC_CUSTOM_NAME, &captureCircuitName));
 
     //
-    // LibrePods mic bridge (Phase 2): init the PCM ring and expose the control
-    // device (\\.\LibrePodsMic) so user mode can push the decoded AirPods audio
+    // NTPods mic bridge (Phase 2): init the PCM ring and expose the control
+    // device (\\.\NTPodsMic) so user mode can push the decoded AirPods audio
     // into the capture stream. Best-effort — a failure here must not fail device
     // add (the mic still enumerates, just without a user-mode feed).
     //

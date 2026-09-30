@@ -1,9 +1,9 @@
 /*++
     Ioctl.c - user-mode bridge. Translates DeviceIoControl calls from the
-    LibrePods app into L2CAP operations.
+    NTPods app into L2CAP operations.
 --*/
 
-#include "LibrePodsAAP.h"
+#include "NTPodsAAP.h"
 
 //
 // The app closed its handle (clean exit OR crash -> the OS closes it for us).
@@ -18,7 +18,7 @@ LpEvtFileClose(
     PDEVICE_CONTEXT ctx = DeviceGetContext(WdfFileObjectGetDevice(FileObject));
 
     if (ctx->State != LpDisconnected) {
-        KdPrint(("LibrePodsAAP: app handle closed -> releasing L2CAP channel\n"));
+        KdPrint(("NTPodsAAP: app handle closed -> releasing L2CAP channel\n"));
         LpDisconnect(ctx);
     }
 }

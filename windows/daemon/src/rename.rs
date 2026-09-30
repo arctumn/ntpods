@@ -3,7 +3,7 @@
 //!
 //! Renaming an audio endpoint writes to HKLM and needs admin, but the tray runs
 //! unelevated. So `install.ps1` registers an elevated, on-demand scheduled task
-//! ("LibrePods Rename Mic") that runs `rename-mic.ps1` with highest privileges. We
+//! ("NTPods Rename Mic") that runs `rename-mic.ps1` with highest privileges. We
 //! drop the desired name in a file and trigger the task via `schtasks /run`,
 //! which runs it elevated WITHOUT a UAC prompt. `rename-mic.ps1` is idempotent —
 //! it does nothing (no audio-service restart) when the mic is already named
@@ -12,7 +12,7 @@
 use std::os::windows::process::CommandExt;
 use std::process::Command;
 
-const TASK_NAME: &str = "LibrePods Rename Mic";
+const TASK_NAME: &str = "NTPods Rename Mic";
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 /// Best-effort, non-blocking: publish `dev_name` and kick the elevated rename
@@ -28,7 +28,7 @@ pub fn apply(dev_name: &str) {
             Ok(la) => la,
             Err(_) => return,
         };
-        let dir = format!("{la}\\LibrePods");
+        let dir = format!("{la}\\NTPods");
         let _ = std::fs::create_dir_all(&dir);
         // Publish the name for the elevated task to read.
         if std::fs::write(format!("{dir}\\micname.txt"), &name).is_err() {

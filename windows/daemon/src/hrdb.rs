@@ -1,5 +1,5 @@
 //! Heart-rate tracking database — a dedicated SQLite file,
-//! `%LOCALAPPDATA%\LibrePods\heart-rate.sqlite3`, kept apart from everything else.
+//! `%LOCALAPPDATA%\NTPods\heart-rate.sqlite3`, kept apart from everything else.
 //!
 //! Schema (v1):
 //! - `sessions`: one row per monitoring run — the AirPods' address, when the first
@@ -45,7 +45,7 @@ impl HrDb {
     /// daemon's logger, so failures land in daemon.log.
     pub fn open(log: fn(&str)) -> HrDb {
         let path = match std::env::var("LOCALAPPDATA") {
-            Ok(la) => std::path::Path::new(&la).join("LibrePods").join("heart-rate.sqlite3"),
+            Ok(la) => std::path::Path::new(&la).join("NTPods").join("heart-rate.sqlite3"),
             Err(_) => {
                 log("hrdb: LOCALAPPDATA not set — heart-rate tracking disabled");
                 return HrDb { tx: None };

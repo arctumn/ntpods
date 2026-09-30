@@ -3,7 +3,7 @@
     from our BTHENUM parent, and tear down the connection on removal.
 --*/
 
-#include "LibrePodsAAP.h"
+#include "NTPodsAAP.h"
 
 NTSTATUS
 LpEvtDevicePrepareHardware(
@@ -39,13 +39,13 @@ LpEvtDevicePrepareHardware(
         NULL);
 
     if (!NT_SUCCESS(status)) {
-        KdPrint(("LibrePodsAAP: QueryInterface(PROFILE_DRIVER_INTERFACE) failed 0x%08X\n", status));
+        KdPrint(("NTPodsAAP: QueryInterface(PROFILE_DRIVER_INTERFACE) failed 0x%08X\n", status));
         ctx->HasBthInterface = FALSE;
         return status; // fatal: without it we cannot allocate/submit BRBs
     }
 
     ctx->HasBthInterface = TRUE;
-    KdPrint(("LibrePodsAAP: acquired BTH profile interface\n"));
+    KdPrint(("NTPodsAAP: acquired BTH profile interface\n"));
 
     // NB: the ATT (PSM 0x001F) server is registered later, from LpConnect, once we
     // know the AirPods' address (registering with BtAddress=0 here returned
@@ -66,7 +66,7 @@ LpEvtDevicePrepareHardware(
 // reference is what pins the whole Bluetooth branch: measured 2026-08-31,
 // `pnputil /restart-device` answered "System reboot is needed to complete
 // configuration operations!" for our devnode AND for the Intel radio above it,
-// with the LibrePodsAAP service already STOPPED. Nothing short of a reboot
+// with the NTPodsAAP service already STOPPED. Nothing short of a reboot
 // cleared it.
 //
 // Statuses are logged rather than discarded, so the debug build shows whether
@@ -82,7 +82,7 @@ LpEvtDeviceSelfManagedIoSuspend(
 
     if (ctx->State != LpDisconnected) {
         status = LpDisconnect(ctx);
-        KdPrint(("LibrePodsAAP: suspend: LpDisconnect = 0x%08X\n", status));
+        KdPrint(("NTPodsAAP: suspend: LpDisconnect = 0x%08X\n", status));
     }
 
     // Close the accepted ATT channel, then unregister the server (both use the
@@ -126,7 +126,7 @@ LpEvtDeviceReleaseHardware(
         ctx->BthInterface.Interface.InterfaceDereference(
             ctx->BthInterface.Interface.Context);
         ctx->HasBthInterface = FALSE;
-        KdPrint(("LibrePodsAAP: BTH interface dereferenced\n"));
+        KdPrint(("NTPodsAAP: BTH interface dereferenced\n"));
     }
     return STATUS_SUCCESS;
 }
@@ -149,7 +149,7 @@ LpEvtDeviceContextCleanup(
     }
 
     if (ctx->HasBthInterface) {
-        KdPrint(("LibrePodsAAP: cleanup: interface still held - dereferencing\n"));
+        KdPrint(("NTPodsAAP: cleanup: interface still held - dereferencing\n"));
         ctx->BthInterface.Interface.InterfaceDereference(
             ctx->BthInterface.Interface.Context);
         ctx->HasBthInterface = FALSE;

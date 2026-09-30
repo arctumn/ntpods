@@ -11,3 +11,6 @@ dist/
 
 # devcon.exe is bundled with the installer (needed to create the ROOT mic device)
 !installer/tools/devcon.exe
+
+# Driver build output (local WDK builds; CI builds its own)
+drivers/**/x64/

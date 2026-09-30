@@ -1,4 +1,4 @@
-# LibrePods on Windows
+# NTPods on Windows
 
 Open-source AirPods control for Windows: battery, noise control, ear detection,
 conversational awareness, volume/mute, hearing aid, device rename, the AirPods'
@@ -7,16 +7,16 @@ conversational awareness, volume/mute, hearing aid, device rename, the AirPods'
 
 It has these parts:
 
-1. **`LibrePodsAAP` kernel driver** ([`drivers/aap`](drivers/aap)) — opens the Apple
+1. **`NTPodsAAP` kernel driver** ([`drivers/aap`](drivers/aap)) — opens the Apple
    Accessory Protocol (AAP) L2CAP channel to the AirPods in kernel mode, which
    normal Windows apps cannot do, and exposes it via IOCTLs.
-2. **`LibrePodsMic` kernel driver** ([`drivers/mic`](drivers/mic)) — a virtual audio
+2. **`NTPodsMic` kernel driver** ([`drivers/mic`](drivers/mic)) — a virtual audio
    device that publishes the AirPods' decoded hi-res mic as a Windows capture
    endpoint (Teams / Zoom / Discord / OBS …).
-3. **`librepodsd` daemon** ([`daemon`](daemon)) — owns both drivers, the AAP session
+3. **`ntpodsd` daemon** ([`daemon`](daemon)) — owns both drivers, the AAP session
    and the mic pipeline (AAC-ELD decode), and serves UI clients over named-pipe IPC.
    It holds the authoritative state.
-4. **`librepods-winui` app** ([`winui`](winui)) — the native **WinUI 3** client; it
+4. **`ntpods-winui` app** ([`winui`](winui)) — the native **WinUI 3** client; it
    lives in the system tray (closing hides it there) and is an IPC client of the
    daemon. It's what you run day-to-day.
 
@@ -52,8 +52,8 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
 It checks Test Mode is on, test-signs and installs **both** drivers, copies
-`librepodsd.exe` + `librepods-winui.exe` (and the FFmpeg DLLs) to
-`%LOCALAPPDATA%\LibrePods`, registers the driver-recovery and mic-rename tasks,
+`ntpodsd.exe` + `ntpods-winui.exe` (and the FFmpeg DLLs) to
+`%LOCALAPPDATA%\NTPods`, registers the driver-recovery and mic-rename tasks,
 and adds the app to startup. The folder is self-contained: no Windows SDK/WDK,
 Visual Studio or VC++ redistributable needed. Reboot afterwards.
 
@@ -73,7 +73,7 @@ prefer the release zip.
 Success for the AAP driver shows `Driver package installed on device:
 BTHENUM\{74ec2172-...}`. Check it loaded (should be `OK`, not error 52):
 ```powershell
-Get-PnpDevice -FriendlyName "LibrePods AAP*" | Select Status
+Get-PnpDevice -FriendlyName "NTPods AAP*" | Select Status
 ```
 The mic driver creates a `ROOT\AudioCodec` device via `devcon`; a virtual
 microphone should appear in **Sound ▸ Input**.
@@ -93,21 +93,21 @@ pnputil /delete-driver oem<N>.inf /uninstall   # find <N> with: pnputil /enum-dr
 bcdedit /set testsigning off                    # then re-enable Secure Boot in BIOS
 ```
 The app's data (settings, logs, the heart-rate history) lives in
-`%LOCALAPPDATA%\LibrePods` — delete that folder to remove it too.
+`%LOCALAPPDATA%\NTPods` — delete that folder to remove it too.
 
 ---
 
 ## 2. Run the app
 
-Two pieces run: the **daemon** (`librepodsd.exe`, headless) and the **WinUI app**
-(`librepods-winui.exe`). Build the daemon natively on Windows, or from WSL/Linux
+Two pieces run: the **daemon** (`ntpodsd.exe`, headless) and the **WinUI app**
+(`ntpods-winui.exe`). Build the daemon natively on Windows, or from WSL/Linux
 (cross-compiled): `cargo build --release --target x86_64-pc-windows-gnu` in
 `daemon/` — run `daemon/fetch-ffmpeg.sh` first, the FFmpeg slice used for AAC-ELD
 decoding is fetched, not committed. Build the WinUI app with Visual Studio's
 MSBuild (`dotnet build` can't load the WinUI PRI task). The release zip bundles
 both, the FFmpeg DLLs and the two drivers CI built from source.
 
-Launch `librepods-winui.exe`; it auto-starts the daemon, shows a tray icon, and its
+Launch `ntpods-winui.exe`; it auto-starts the daemon, shows a tray icon, and its
 window hides to the tray on close. To start it at login, use the installer (which
 registers it) or [`startup.ps1`](startup.ps1).
 
@@ -130,7 +130,7 @@ registers it) or [`startup.ps1`](startup.ps1).
 
 ### The hi-res microphone
 The daemon watches the virtual mic's capture-activity counter: when any app opens
-"LibrePods" as its microphone, it enables the AAP uplink automatically, decodes the
+"NTPods" as its microphone, it enables the AAP uplink automatically, decodes the
 AAC-ELD stream and feeds the driver; when the app releases the mic it stops
 (debounced) and restores A2DP stereo. There's a manual toggle too. While the mic is
 active the AirPods are in their bidirectional call mode, so playback is mono — that
@@ -146,7 +146,7 @@ the sensor settles you get one reading per second:
   of it, with its stats and the time of each point.
 
 Every reading is kept in a dedicated SQLite database,
-`%LOCALAPPDATA%\LibrePods\heart-rate.sqlite3` (`sessions` + `samples`: time, BPM
+`%LOCALAPPDATA%\NTPods\heart-rate.sqlite3` (`sessions` + `samples`: time, BPM
 and the sensor's confidence), so you can also query it with any SQLite tool. It
 uses extra battery while it's on.
 

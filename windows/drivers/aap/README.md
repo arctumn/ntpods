@@ -1,11 +1,11 @@
-# LibrePodsAAP — Windows AAP L2CAP driver
+# NTPodsAAP — Windows AAP L2CAP driver
 
 Open-source KMDF Bluetooth **profile driver** that lets Windows talk to AirPods
 over Apple's Accessory Protocol (AAP). AAP runs on a classic-Bluetooth **L2CAP
 channel at PSM `0x1001`**, which Windows user-mode Winsock cannot open (only
 RFCOMM is exposed; raw L2CAP `connect()` fails with `WSAENETDOWN`). This driver
 opens that channel in kernel mode and bridges it to user space via
-`DeviceIoControl`, so the LibrePods app can read battery, toggle ANC, etc.
+`DeviceIoControl`, so the NTPods app can read battery, toggle ANC, etc.
 
 ## How it binds (the key trick)
 
@@ -22,13 +22,13 @@ service. Architecture reference: MS `bthecho` sample + `nefarius/BthPS3`.
 
 | File | Role |
 |------|------|
-| `LibrePodsAAP.h` | IOCTL contract, device context, prototypes |
+| `NTPodsAAP.h` | IOCTL contract, device context, prototypes |
 | `Driver.c` | `DriverEntry`, device creation, IOCTL queue |
 | `Device.c` | PnP: query `BTH_PROFILE_DRIVER_INTERFACE`, get I/O target |
 | `L2cap.c` | connect / disconnect / send / receive via BRBs |
 | `Ioctl.c` | user-mode bridge (DeviceIoControl → L2CAP) |
-| `LibrePodsAAP.inf` | binds to the AAP service, installs KMDF service |
-| `LibrePodsAAP.vcxproj` | KMDF x64 project |
+| `NTPodsAAP.inf` | binds to the AAP service, installs KMDF service |
+| `NTPodsAAP.vcxproj` | KMDF x64 project |
 
 ## IOCTL contract (for the user-mode transport)
 
@@ -42,10 +42,10 @@ Needs VS2022/2026 with the C++ workload + Windows SDK/WDK (matching build number
 e.g. 28000). From a Developer prompt:
 
 ```
-msbuild LibrePodsAAP.vcxproj /p:Configuration=Release /p:Platform=x64
+msbuild NTPodsAAP.vcxproj /p:Configuration=Release /p:Platform=x64
 ```
 
-Then generate the catalog from a folder holding `LibrePodsAAP.sys` + `.inf`:
+Then generate the catalog from a folder holding `NTPodsAAP.sys` + `.inf`:
 
 ```
 inf2cat /driver:<pkg-dir> /os:10_X64
@@ -70,17 +70,17 @@ Manually, step by step:
 
 ```powershell
 # 1. test cert + sign
-$c = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=LibrePods Test" -CertStoreLocation Cert:\LocalMachine\My
-signtool sign /fd SHA256 /sha1 $c.Thumbprint LibrePodsAAP.sys
-signtool sign /fd SHA256 /sha1 $c.Thumbprint librepodsaap.cat
+$c = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=NTPods Test" -CertStoreLocation Cert:\LocalMachine\My
+signtool sign /fd SHA256 /sha1 $c.Thumbprint NTPodsAAP.sys
+signtool sign /fd SHA256 /sha1 $c.Thumbprint ntpodsaap.cat
 # 2. trust the cert (Trusted Root + Trusted Publishers, LocalMachine)
 # 3. enable test signing, disable Secure Boot in firmware, reboot
 bcdedit /set testsigning on
 # 4. install (binds to the AirPods AAP devnode)
-pnputil /add-driver LibrePodsAAP.inf /install
+pnputil /add-driver NTPodsAAP.inf /install
 ```
 
-Uninstall: `pnputil /delete-driver LibrePodsAAP.inf /uninstall`, then
+Uninstall: `pnputil /delete-driver NTPodsAAP.inf /uninstall`, then
 `bcdedit /set testsigning off` and re-enable Secure Boot.
 
 ## Status

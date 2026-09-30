@@ -1,5 +1,5 @@
-//! Shared IPC protocol between `librepodsd` (the driver-owning daemon) and the
-//! LibrePods UIs (the tray + the full app). Newline-delimited JSON over a Windows
+//! Shared IPC protocol between `ntpodsd` (the driver-owning daemon) and the
+//! NTPods UIs (the tray + the full app). Newline-delimited JSON over a Windows
 //! named pipe — see `../../../docs/windows/daemon-ipc/PLAN.md`.
 
 use serde::{Deserialize, Serialize};
@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 /// stalls the WriteFile for events on the same handle). The daemon only WRITES
 /// events on `PIPE_EVENTS` and only READS commands on `PIPE_CMDS`, so no handle
 /// ever does both directions concurrently.
-pub const PIPE_EVENTS: &str = r"\\.\pipe\LibrePods-events";
-pub const PIPE_CMDS: &str = r"\\.\pipe\LibrePods-cmds";
+pub const PIPE_EVENTS: &str = r"\\.\pipe\NTPods-events";
+pub const PIPE_CMDS: &str = r"\\.\pipe\NTPods-cmds";
 
 /// Raw L2CAP proxy for the full app (Phase 3): the daemon owns the exclusive
 /// driver, so the app can't open it — it runs its AAP session over these instead.
@@ -18,8 +18,8 @@ pub const PIPE_CMDS: &str = r"\\.\pipe\LibrePods-cmds";
 /// a u16 LE length, then the bytes) and reads the app's outgoing packets (same
 /// framing) from `PIPE_L2CAP_TX`, forwarding them to the driver. One pipe per
 /// direction (a sync duplex handle would deadlock).
-pub const PIPE_L2CAP_RX: &str = r"\\.\pipe\LibrePods-l2cap-rx";
-pub const PIPE_L2CAP_TX: &str = r"\\.\pipe\LibrePods-l2cap-tx";
+pub const PIPE_L2CAP_RX: &str = r"\\.\pipe\NTPods-l2cap-rx";
+pub const PIPE_L2CAP_TX: &str = r"\\.\pipe\NTPods-l2cap-tx";
 
 /// Battery levels (percent), each optional — a packet may carry only some.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]

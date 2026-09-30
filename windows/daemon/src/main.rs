@@ -1,4 +1,4 @@
-//! librepodsd — the LibrePods Windows daemon. Owns the exclusive AAP driver
+//! ntpodsd — the NTPods Windows daemon. Owns the exclusive AAP driver
 //! handle, the AAP session, and the hi-res mic pipeline, and serves the tray /
 //! full app over a named-pipe IPC (NDJSON). See ../../../docs/windows/daemon-ipc/PLAN.md.
 //! Runs headless — no console window (it's spawned by the tray/app).
@@ -30,8 +30,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use librepods_ipc as ipc;
-use librepods_ipc::{
+use ntpods_ipc as ipc;
+use ntpods_ipc::{
     from_line, to_line, Command, Event, Snapshot, PIPE_CMDS, PIPE_EVENTS, PIPE_L2CAP_RX,
     PIPE_L2CAP_TX,
 };
@@ -81,14 +81,14 @@ fn log(s: &str) {
         if let Ok(mut f) = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
-            .open(format!("{la}\\LibrePods\\daemon.log"))
+            .open(format!("{la}\\NTPods\\daemon.log"))
         {
             let _ = writeln!(f, "{ts} {s}");
         }
     }
 }
 
-fn battery_text(b: &librepods_ipc::Battery, connected: bool) -> String {
+fn battery_text(b: &ntpods_ipc::Battery, connected: bool) -> String {
     if !connected {
         return "Disconnected".to_string();
     }
@@ -1266,9 +1266,9 @@ fn run_receiver(ctx: Ctx) {
         // EXPERIMENT (opt-in): one-shot GATT discovery — walk the buds' GATT server as
         // a CLIENT to find any heart-rate characteristic we never enumerated. It wakes
         // hearing-assist and blocks the AAP loop while it listens, so it must NOT run in
-        // normal use — it's gated behind the LIBREPODS_GATT_PROBE env flag (start the
+        // normal use — it's gated behind the NTPODS_GATT_PROBE env flag (start the
         // daemon with that var set to enable it). Runs once per session.
-        if std::env::var_os("LIBREPODS_GATT_PROBE").is_some() {
+        if std::env::var_os("NTPODS_GATT_PROBE").is_some() {
             static GATT_PROBED: AtomicBool = AtomicBool::new(false);
             if !GATT_PROBED.swap(true, Ordering::Relaxed) {
                 for line in gatt::probe(&driver) {
@@ -1987,14 +1987,14 @@ fn poll_mic(ctx: Ctx) {
 fn main() {
     // Single instance: never run two daemons over the one exclusive driver.
     unsafe {
-        let name = wide("Local\\LibrePodsDaemonSingleton");
+        let name = wide("Local\\NTPodsDaemonSingleton");
         let _ = CreateMutexW(ptr::null(), 0, name.as_ptr());
         if GetLastError() == ERROR_ALREADY_EXISTS {
             return;
         }
     }
 
-    log("=== librepodsd start ===");
+    log("=== ntpodsd start ===");
     let (mac, dev_name) = match bt::find_airpods() {
         Some((m, n)) => (m, n),
         None => (0, "AirPods".to_string()),

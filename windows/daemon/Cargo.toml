@@ -1,11 +1,11 @@
 [package]
-name = "librepodsd"
+name = "ntpodsd"
 version = "0.1.0"
 edition = "2021"
-description = "LibrePods Windows daemon — owns the AAP driver + hi-res mic, serves the tray/app over IPC."
+description = "NTPods Windows daemon — owns the AAP driver + hi-res mic, serves the tray/app over IPC."
 
 [dependencies]
-librepods-ipc = { path = "../ipc" }
+ntpods-ipc = { path = "../ipc" }
 serde_json = "1"
 # Heart-rate tracking DB (hrdb.rs). `bundled` compiles SQLite in, so neither the
 # user nor the build machine needs it installed.
@@ -41,7 +41,7 @@ windows = { version = "0.58", features = [
 cc = "1"
 
 [[bin]]
-name = "librepodsd"
+name = "ntpodsd"
 path = "src/main.rs"
 
 [profile.release]

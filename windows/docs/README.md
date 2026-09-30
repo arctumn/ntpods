@@ -1,10 +1,10 @@
-# LibrePods — Windows docs
+# NTPods — Windows docs
 
 Notes for the Windows port: the drivers, the daemon, and the reverse-engineering
 that each feature needed.
 
 - **[`daemon-ipc/PLAN.md`](daemon-ipc/PLAN.md)** — the daemon + named-pipe IPC
-  design: why `librepodsd` owns the drivers and the UIs are thin clients.
+  design: why `ntpodsd` owns the drivers and the UIs are thin clients.
 - **[`hires-mic/PLAN.md`](hires-mic/PLAN.md)** — the hi-res AirPods microphone:
   the AAP uplink protocol, AAC-ELD decoding, and the virtual audio driver.
 - **[`heart-rate.md`](heart-rate.md)** — heart-rate monitoring: why it needed the

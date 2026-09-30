@@ -6,7 +6,7 @@ Module Name:
 
 Abstract:
 
-    Implementation of the LibrePods hi-res microphone bridge. See MicPipe.h.
+    Implementation of the NTPods hi-res microphone bridge. See MicPipe.h.
 
     Design: a single global byte ring buffer guarded by a spin lock (the virtual
     mic is single-instance). User mode writes decoded PCM via the control device
@@ -207,7 +207,7 @@ MicPipe_EvtIoDeviceControl(
     UNREFERENCED_PARAMETER(Queue);
     UNREFERENCED_PARAMETER(OutputBufferLength);
 
-    if (IoControlCode == IOCTL_LIBREPODS_MIC_WRITE_PCM && InputBufferLength > 0) {
+    if (IoControlCode == IOCTL_NTPODS_MIC_WRITE_PCM && InputBufferLength > 0) {
         PVOID  buf = NULL;
         size_t len = 0;
         status = WdfRequestRetrieveInputBuffer(Request, 1, &buf, &len);
@@ -215,7 +215,7 @@ MicPipe_EvtIoDeviceControl(
             MicPipeWrite(buf, (ULONG)len);
             info = len;
         }
-    } else if (IoControlCode == IOCTL_LIBREPODS_MIC_STATUS) {
+    } else if (IoControlCode == IOCTL_NTPODS_MIC_STATUS) {
         PVOID  buf = NULL;
         size_t len = 0;
         status = WdfRequestRetrieveOutputBuffer(Request, sizeof(LONG), &buf, &len);
@@ -240,11 +240,11 @@ MicPipeCreateControlDevice(
     WDF_IO_QUEUE_CONFIG  qCfg;
 
     // SYSTEM: all, Builtin Admins: RWX, Everyone: RW (so a non-elevated app can
-    // open \\.\LibrePodsMic and push audio).
+    // open \\.\NTPodsMic and push audio).
     DECLARE_CONST_UNICODE_STRING(sddl,
         L"D:P(A;;GA;;;SY)(A;;GRGWGX;;;BA)(A;;GRGW;;;WD)");
-    DECLARE_CONST_UNICODE_STRING(ntName,  L"\\Device\\LibrePodsMic");
-    DECLARE_CONST_UNICODE_STRING(symLink, L"\\DosDevices\\LibrePodsMic");
+    DECLARE_CONST_UNICODE_STRING(ntName,  L"\\Device\\NTPodsMic");
+    DECLARE_CONST_UNICODE_STRING(symLink, L"\\DosDevices\\NTPodsMic");
 
     // Driver-scoped, created once. Survives PnP device remove/re-add.
     if (g_ControlDevice != NULL) {

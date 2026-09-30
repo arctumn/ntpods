@@ -1,8 +1,8 @@
 <#
-    LibrePods - unattended recovery of the AAP driver devnode. NO REBOOT.
+    NTPods - unattended recovery of the AAP driver devnode. NO REBOOT.
 
     Two ways in:
-      * The "LibrePods Fix Driver" scheduled task (RunLevel Highest), which
+      * The "NTPods Fix Driver" scheduled task (RunLevel Highest), which
         install.ps1 registers and the daemon triggers with `schtasks /run` when it
         can no longer open the driver while Windows still has the AirPods
         connected - see daemon/src/devnode.rs. Already elevated, runs hidden.
@@ -11,7 +11,7 @@
 
     WHY THE LADDER LOOKS LIKE THIS (measured 2026-08-31, from a real Code 38):
 
-      sc query LibrePodsAAP  ->  STATE: STOPPED, WIN32_EXIT_CODE: 31
+      sc query NTPodsAAP  ->  STATE: STOPPED, WIN32_EXIT_CODE: 31
 
     The driver image was NOT loaded, yet the devnode still reported
     CM_PROB_DRIVER_FAILED_PRIOR_UNLOAD. So "a previous instance is still in
@@ -64,7 +64,7 @@ if (-not $isAdmin) {
 }
 
 # ---- logging ----------------------------------------------------------------
-$log = Join-Path $env:LOCALAPPDATA 'LibrePods\fix-driver.log'
+$log = Join-Path $env:LOCALAPPDATA 'NTPods\fix-driver.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 function Log($m) {
     $line = '{0:HH:mm:ss.fff} {1}' -f (Get-Date), $m
@@ -81,7 +81,7 @@ function Done($code) {
 # (the app renames the AirPods), the service name comes from the INF and cannot.
 function Get-AapDevice {
     Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue | Where-Object {
-        (Get-PnpDeviceProperty -InstanceId $_.InstanceId -KeyName 'DEVPKEY_Device_Service' -ErrorAction SilentlyContinue).Data -eq 'LibrePodsAAP'
+        (Get-PnpDeviceProperty -InstanceId $_.InstanceId -KeyName 'DEVPKEY_Device_Service' -ErrorAction SilentlyContinue).Data -eq 'NTPodsAAP'
     } | Select-Object -First 1
 }
 
@@ -114,7 +114,7 @@ function Get-BtRadio($InstanceId) {
 # ---- find the devnode -------------------------------------------------------
 $dev = Get-AapDevice
 if (-not $dev) {
-    Log 'no LibrePodsAAP devnode - the AirPods are not connected to Windows. Nothing to do.'
+    Log 'no NTPodsAAP devnode - the AirPods are not connected to Windows. Nothing to do.'
     Done 0
 }
 if ($dev.Status -eq 'OK') {
@@ -124,12 +124,12 @@ if ($dev.Status -eq 'OK') {
 
 Log "devnode $($dev.InstanceId)"
 Log "  state: $($dev.Status) / $($dev.Problem)"
-$svc = sc.exe query LibrePodsAAP 2>&1 | Select-String 'STATE' | ForEach-Object { $_.ToString().Trim() }
+$svc = sc.exe query NTPodsAAP 2>&1 | Select-String 'STATE' | ForEach-Object { $_.ToString().Trim() }
 Log "  service: $svc"
 
 # ---- 1. free the exclusive handle -------------------------------------------
 # The devnode cannot unload while a handle is open. Clear any straggler.
-$held = Get-Process librepodsd, librepods-winui, librepods-tray, librepods -ErrorAction SilentlyContinue
+$held = Get-Process ntpodsd, ntpods-winui, ntpods-tray, ntpods -ErrorAction SilentlyContinue
 if ($held) {
     Log "  stopping handle holders: $(($held | ForEach-Object { $_.ProcessName }) -join ', ')"
     $held | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -203,7 +203,7 @@ if (-not $ok -and $dev) {
 # ---- 5. bring the daemon back -----------------------------------------------
 if ($ok) {
     Log 'recovered without a reboot.'
-    $daemon = Join-Path $env:LOCALAPPDATA 'LibrePods\librepodsd.exe'
+    $daemon = Join-Path $env:LOCALAPPDATA 'NTPods\ntpodsd.exe'
     if (Test-Path $daemon) {
         Log '  restarting the daemon'
         Start-Process $daemon

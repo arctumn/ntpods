@@ -1,5 +1,5 @@
-//! Writer for the LibrePodsMic virtual microphone: pushes decoded PCM into the
-//! driver's ring buffer over the control device `\\.\LibrePodsMic`.
+//! Writer for the NTPodsMic virtual microphone: pushes decoded PCM into the
+//! driver's ring buffer over the control device `\\.\NTPodsMic`.
 
 use std::ffi::c_void;
 use std::ptr;
@@ -14,9 +14,9 @@ use windows_sys::Win32::System::IO::DeviceIoControl;
 const GENERIC_READ: u32 = 0x8000_0000;
 const GENERIC_WRITE: u32 = 0x4000_0000;
 // CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_WRITE_DATA)
-const IOCTL_LIBREPODS_MIC_WRITE_PCM: u32 = 0x0022_A000;
+const IOCTL_NTPODS_MIC_WRITE_PCM: u32 = 0x0022_A000;
 // CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_READ_DATA)
-const IOCTL_LIBREPODS_MIC_STATUS: u32 = 0x0022_6004;
+const IOCTL_NTPODS_MIC_STATUS: u32 = 0x0022_6004;
 
 pub struct MicPipe {
     handle: HANDLE,
@@ -29,10 +29,10 @@ unsafe impl Send for MicPipe {}
 unsafe impl Sync for MicPipe {}
 
 impl MicPipe {
-    /// Open the virtual-mic control device. None if the LibrePodsMic driver
+    /// Open the virtual-mic control device. None if the NTPodsMic driver
     /// isn't installed (or another writer holds the exclusive handle).
     pub fn open() -> Option<MicPipe> {
-        let path: Vec<u16> = r"\\.\LibrePodsMic"
+        let path: Vec<u16> = r"\\.\NTPodsMic"
             .encode_utf16()
             .chain(std::iter::once(0))
             .collect();
@@ -63,7 +63,7 @@ impl MicPipe {
         let ok = unsafe {
             DeviceIoControl(
                 self.handle,
-                IOCTL_LIBREPODS_MIC_STATUS,
+                IOCTL_NTPODS_MIC_STATUS,
                 ptr::null(),
                 0,
                 out.as_mut_ptr() as *mut c_void,
@@ -90,7 +90,7 @@ impl MicPipe {
         let ok = unsafe {
             DeviceIoControl(
                 self.handle,
-                IOCTL_LIBREPODS_MIC_WRITE_PCM,
+                IOCTL_NTPODS_MIC_WRITE_PCM,
                 samples.as_ptr() as *const c_void,
                 bytes as u32,
                 ptr::null_mut(),

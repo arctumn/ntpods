@@ -6,11 +6,11 @@ Module Name:
 
 Abstract:
 
-    LibrePods hi-res microphone bridge (Phase 2). A global ring buffer that
+    NTPods hi-res microphone bridge (Phase 2). A global ring buffer that
     user mode fills with decoded PCM over an IOCTL, and the ACX capture stream
     engine drains one packet per notification tick (see StreamEngine.cpp
     ProcessPacket). Exposed to user mode through a control device
-    (\\.\LibrePodsMic).
+    (\\.\NTPodsMic).
 
     PCM format: mono, 16-bit, 44100 or 48000 Hz (whatever the client opens the
     capture endpoint with — see Capture_AllocateSupportedFormats).
@@ -31,7 +31,7 @@ Environment:
 // Value (precomputed for the user-mode side): 0x0022A000.
 //   CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_WRITE_DATA)
 //
-#define IOCTL_LIBREPODS_MIC_WRITE_PCM \
+#define IOCTL_NTPODS_MIC_WRITE_PCM \
     CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_WRITE_DATA)
 
 //
@@ -41,7 +41,7 @@ Environment:
 // Value (precomputed): 0x00226004.
 //   CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_READ_DATA)
 //
-#define IOCTL_LIBREPODS_MIC_STATUS \
+#define IOCTL_NTPODS_MIC_STATUS \
     CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_READ_DATA)
 
 EXTERN_C_START
@@ -56,8 +56,8 @@ MicPipeInit(
 );
 
 //
-// Create the control device (\Device\LibrePodsMic + \DosDevices\LibrePodsMic)
-// that exposes IOCTL_LIBREPODS_MIC_WRITE_PCM. Driver-scoped and created once;
+// Create the control device (\Device\NTPodsMic + \DosDevices\NTPodsMic)
+// that exposes IOCTL_NTPODS_MIC_WRITE_PCM. Driver-scoped and created once;
 // safe to call again (returns STATUS_SUCCESS if already created). Best-effort:
 // a failure here must not fail device add (the mic still enumerates, just with
 // no user-mode feed yet).

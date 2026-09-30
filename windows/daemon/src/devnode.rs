@@ -10,7 +10,7 @@
 //! the second half needs privileges.
 //!
 //! So we use the same escape hatch as the mic rename (see `rename.rs`):
-//! `install.ps1` registers an on-demand scheduled task ("LibrePods Fix Driver",
+//! `install.ps1` registers an on-demand scheduled task ("NTPods Fix Driver",
 //! RunLevel Highest) around `fix-driver.ps1`, and we fire it with `schtasks /run`
 //! — elevated, no UAC prompt. The script re-checks the devnode itself and exits
 //! without touching anything when it is healthy, so a spurious trigger is cheap
@@ -21,7 +21,7 @@ use std::process::Command;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-const TASK_NAME: &str = "LibrePods Fix Driver";
+const TASK_NAME: &str = "NTPods Fix Driver";
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 /// Never ask for a recovery more often than this. Restarting the devnode takes

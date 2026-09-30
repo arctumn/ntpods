@@ -1,5 +1,5 @@
 <#
-    install.ps1 - test-sign + install the LibrePodsMic virtual audio driver, and
+    install.ps1 - test-sign + install the NTPodsMic virtual audio driver, and
     create its ROOT-enumerated device so a virtual microphone appears.
 
     RUN AS ADMINISTRATOR, in Test Mode (bcdedit /set testsigning on + reboot,
@@ -25,7 +25,7 @@ $signtool = (Get-ChildItem "$kit\bin" -Recurse -Filter signtool.exe |
     Where-Object { $_.FullName -match 'x64' } | Select-Object -First 1).FullName
 
 # 1. A package folder with the .sys + .inf together, then a catalog.
-$pkg = Join-Path $env:TEMP 'LibrePodsMicPkg'
+$pkg = Join-Path $env:TEMP 'NTPodsMicPkg'
 Remove-Item $pkg -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $pkg | Out-Null
 Copy-Item $sys, $inf $pkg -Force
@@ -36,7 +36,7 @@ $cat = Join-Path $pkg 'audiocodec.cat'
 # 2. Test code-signing cert, trusted for driver loading.
 Write-Host '==> Creating + trusting a test certificate...'
 $cert = New-SelfSignedCertificate -Type CodeSigningCert `
-    -Subject 'CN=LibrePods Test Cert' `
+    -Subject 'CN=NTPods Test Cert' `
     -CertStoreLocation Cert:\LocalMachine\My `
     -KeyUsage DigitalSignature -KeyExportPolicy Exportable
 $store = Get-Item "Cert:\LocalMachine\My\$($cert.Thumbprint)"

@@ -5,7 +5,7 @@
 // INITGUID (via initguid.h) must precede the headers so DEFINE_GUID emits the
 // GUID *data* here (exactly one TU). Other .c files get extern declarations.
 #include <initguid.h>
-#include "LibrePodsAAP.h"
+#include "NTPodsAAP.h"
 
 NTSTATUS
 DriverEntry(
@@ -16,7 +16,7 @@ DriverEntry(
     WDF_DRIVER_CONFIG config;
     NTSTATUS          status;
 
-    KdPrint(("LibrePodsAAP: DriverEntry\n"));
+    KdPrint(("NTPodsAAP: DriverEntry\n"));
 
     WDF_DRIVER_CONFIG_INIT(&config, LpEvtDeviceAdd);
 
@@ -29,7 +29,7 @@ DriverEntry(
     );
 
     if (!NT_SUCCESS(status)) {
-        KdPrint(("LibrePodsAAP: WdfDriverCreate failed 0x%08X\n", status));
+        KdPrint(("NTPodsAAP: WdfDriverCreate failed 0x%08X\n", status));
     }
     return status;
 }
@@ -50,7 +50,7 @@ LpEvtDeviceAdd(
 
     UNREFERENCED_PARAMETER(Driver);
 
-    KdPrint(("LibrePodsAAP: EvtDeviceAdd\n"));
+    KdPrint(("NTPodsAAP: EvtDeviceAdd\n"));
 
     // We are the function driver for the AAP service PDO exposed by BTHENUM.
     WDF_PNPPOWER_EVENT_CALLBACKS_INIT(&pnpPower);
@@ -80,7 +80,7 @@ LpEvtDeviceAdd(
 
     status = WdfDeviceCreate(&DeviceInit, &deviceAttrs, &device);
     if (!NT_SUCCESS(status)) {
-        KdPrint(("LibrePodsAAP: WdfDeviceCreate failed 0x%08X\n", status));
+        KdPrint(("NTPodsAAP: WdfDeviceCreate failed 0x%08X\n", status));
         return status;
     }
 
@@ -93,7 +93,7 @@ LpEvtDeviceAdd(
 
     status = WdfSpinLockCreate(WDF_NO_OBJECT_ATTRIBUTES, &ctx->Lock);
     if (!NT_SUCCESS(status)) {
-        KdPrint(("LibrePodsAAP: WdfSpinLockCreate failed 0x%08X\n", status));
+        KdPrint(("NTPodsAAP: WdfSpinLockCreate failed 0x%08X\n", status));
         return status;
     }
 
@@ -107,7 +107,7 @@ LpEvtDeviceAdd(
         wiAttrs.ParentObject = device;
         status = WdfWorkItemCreate(&wiConfig, &wiAttrs, &ctx->AttAcceptWorkItem);
         if (!NT_SUCCESS(status)) {
-            KdPrint(("LibrePodsAAP: WdfWorkItemCreate failed 0x%08X\n", status));
+            KdPrint(("NTPodsAAP: WdfWorkItemCreate failed 0x%08X\n", status));
             return status;
         }
     }
@@ -118,16 +118,16 @@ LpEvtDeviceAdd(
 
     status = WdfIoQueueCreate(device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
     if (!NT_SUCCESS(status)) {
-        KdPrint(("LibrePodsAAP: WdfIoQueueCreate failed 0x%08X\n", status));
+        KdPrint(("NTPodsAAP: WdfIoQueueCreate failed 0x%08X\n", status));
         return status;
     }
 
-    status = WdfDeviceCreateDeviceInterface(device, &GUID_DEVINTERFACE_LIBREPODSAAP, NULL);
+    status = WdfDeviceCreateDeviceInterface(device, &GUID_DEVINTERFACE_NTPODSAAP, NULL);
     if (!NT_SUCCESS(status)) {
-        KdPrint(("LibrePodsAAP: CreateDeviceInterface failed 0x%08X\n", status));
+        KdPrint(("NTPodsAAP: CreateDeviceInterface failed 0x%08X\n", status));
         return status;
     }
 
-    KdPrint(("LibrePodsAAP: device created\n"));
+    KdPrint(("NTPodsAAP: device created\n"));
     return STATUS_SUCCESS;
 }
