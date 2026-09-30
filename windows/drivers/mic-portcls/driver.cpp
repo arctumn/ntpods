@@ -66,6 +66,22 @@ VOID MicRingWrite(_In_reads_bytes_(Len) const VOID* Data, _In_ ULONG Len)
     KeReleaseSpinLock(&g_RingLock, irql);
 }
 
+// The daemon keeps writing while nobody captures, so the ring holds ~100 ms of old
+// audio by the time a stream starts. Drop it, or every recording opens with a
+// snippet of whatever the mic heard before.
+VOID MicRingFlush()
+{
+    KIRQL irql;
+
+    if (!g_RingInited) {
+        return;
+    }
+    KeAcquireSpinLock(&g_RingLock, &irql);
+    g_Tail = g_Head;
+    g_Count = 0;
+    KeReleaseSpinLock(&g_RingLock, irql);
+}
+
 VOID MicRingRead(_Out_writes_bytes_(Len) PVOID Out, _In_ ULONG Len)
 {
     UCHAR* dst = (UCHAR*)Out;

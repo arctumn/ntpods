@@ -45,6 +45,7 @@
 VOID MicRingInit();
 VOID MicRingWrite(_In_reads_bytes_(Len) const VOID* Data, _In_ ULONG Len);
 VOID MicRingRead(_Out_writes_bytes_(Len) PVOID Out, _In_ ULONG Len);
+VOID MicRingFlush();
 
 // Miniport factories (wave.cpp, topo.cpp).
 NTSTATUS CreateWaveMiniport(_Out_ PUNKNOWN* Unknown);

@@ -197,6 +197,7 @@ STDMETHODIMP_(NTSTATUS) CCaptureStream::SetState(_In_ KSSTATE State)
         m_QpcFreq = freq.QuadPart;
         m_RunQpc = now;
         m_RunSamples = m_Samples;
+        MicRingFlush();
         break;
     default:
         break;
