@@ -28,9 +28,9 @@ here is wrong, open an issue and I'll fix it.
 | Platforms | Windows | Android, Linux | Windows, Steam Deck |
 | Price | Free (GPL-3.0, drivers too) | Free (GPL-3.0) | Paid (Microsoft Store) |
 | Battery | yes | yes | yes |
-| Noise control | yes | yes | yes |
+| Noise control | yes | yes | yes, with its driver |
 | Ear detection | yes | yes | yes |
-| Conversational awareness | yes | yes | yes |
+| Conversational awareness | yes | yes | yes, with its driver |
 | Adaptive / personalized volume, allow off | yes | Android | partial |
 | Hi-res mic as a system input | yes | no | no |
 | Heart rate (AirPods Pro 3) | yes | Android | no |
@@ -38,10 +38,13 @@ here is wrong, open an issue and I'll fix it.
 | Head gestures | no | Android | no |
 | Other earbuds | no | Nothing (Linux) | yes |
 | Low-latency mode | no | no | yes |
-| Needs Test Mode on Windows | yes | n/a | no (Store version) |
+| Needs Test Mode on Windows | yes | n/a | yes, for its driver (ANC and most AirPods features) |
 
-MagicPods is the better pick if you use non-Apple earbuds, want a low-latency mode,
-or don't want to turn on Test Mode. LibrePods is what you want on Android and Linux.
+Like NTPods, MagicPods needs a driver for noise control and most AirPods features,
+and that driver needs Test Mode (a community-signed build only works on Windows
+versions before the April 2026 update). MagicPods is the better pick if you use
+non-Apple earbuds or want a low-latency mode. LibrePods is what you want on Android
+and Linux.
 
 ## Installing on Windows
 
