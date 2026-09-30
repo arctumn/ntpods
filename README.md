@@ -22,6 +22,33 @@ kernel drivers included.
 
 For Android and Linux today, use [LibrePods](https://github.com/kavishdevar/librepods).
 
+## How it compares
+
+A fair-as-we-can snapshot (Sept 2026), from each project's own README, store page and docs — corrections welcome.
+✓ yes · ◐ partial / experimental · — no.
+
+| | **NTPods** | [LibrePods](https://github.com/kavishdevar/librepods) | [MagicPods](https://magicpods.app/) |
+|---|---|---|---|
+| Platforms | Windows (WSL/Linux planned) | Android, Linux | Windows, Steam Deck (Linux) |
+| Price / license | **Free, GPL-3.0 — app and both kernel drivers** | Free, GPL-3.0 | Paid on the Microsoft Store; app source open, AAP driver separate |
+| Battery (L / R / case) | ✓ | ✓ | ✓ |
+| Noise control (Off / ANC / Transparency / Adaptive) | ✓ | ✓ | ✓ |
+| Ear detection auto-pause | ✓ | ✓ | ✓ |
+| Conversational Awareness | ✓ | ✓ | ✓ |
+| Adaptive noise strength, Allow-Off, Adaptive / Personalized Volume | ✓ | ✓ (Android) | ◐ |
+| **Hi-res AirPods microphone** as a system input | ✓ (own virtual mic driver) | — | — (system HFP, 16 kHz) |
+| **Heart rate** (AirPods Pro 3) | ✓ live BPM, graph, session history | ◐ in development (PR #702) | — |
+| Hearing-aid audiogram | ◐ experimental | ◐ Android (needs VendorID spoofing) | — |
+| Head gestures | — | ✓ (Android) | — |
+| Other earbuds (Galaxy Buds, Beats, Nothing…) | — | ◐ (Linux: Nothing) | ✓ |
+| Low-latency gaming mode | — | — | ✓ |
+| Needs Windows Test Mode | yes (test-signed drivers) | n/a | Store build: no; open build: yes |
+
+Where the others are ahead is stated plainly: MagicPods has multi-vendor support, a
+low-latency mode and a signed build that runs without Test Mode; LibrePods covers
+Android and Linux and has head gestures. NTPods' edge on Windows: fully free and
+open — drivers included — with the hi-res mic and heart rate.
+
 ## Get it (Windows)
 
 Download `LibrePods-Windows.zip` from the latest release, extract it and run
