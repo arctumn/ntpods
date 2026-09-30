@@ -78,7 +78,13 @@ Copy-Item (Join-Path $installer 'tools\*')            (Join-Path $Out 'tools') -
 
 # ---- driver packages (prebuilt with catalogs, so no WDK is needed to install) -
 Copy-Item (Join-Path $win 'drivers\aap\prebuilt\*') (Join-Path $Out 'driver') -Force
-Copy-Item (Join-Path $win 'drivers\mic-portcls\prebuilt\*') (Join-Path $Out 'driver-mic') -Force
+# The mic package isn't committed: CI builds it into this folder before running
+# this script. Locally, build it (and its catalog) the same way first.
+$micPkg = Join-Path $win 'drivers\mic-portcls\prebuilt'
+if (-not (Test-Path (Join-Path $micPkg 'NTPodsMicPC.sys'))) {
+    throw "No mic driver package in $micPkg. Build drivers\mic-portcls and run inf2cat into that folder (see the 'Regenerate driver catalogs' step in .github/workflows/ci-windows.yml), or take driver-mic\ from a release zip."
+}
+Copy-Item (Join-Path $micPkg '*') (Join-Path $Out 'driver-mic') -Force
 Get-ChildItem (Join-Path $Out 'driver'), (Join-Path $Out 'driver-mic') -Filter 'README.md' |
     Remove-Item -Force -ErrorAction SilentlyContinue
 

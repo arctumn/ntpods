@@ -129,6 +129,8 @@ jobs:
             & $inf2cat.FullName /driver:$pkg /os:10_X64
             $cat = Join-Path $pkg $d.Cat
             if (-not (Test-Path $cat)) { throw "$($d.Name): Inf2Cat did not produce $($d.Cat)" }
+            # The mic's prebuilt folder isn't in git; the AAP's is, and gets overwritten.
+            New-Item -ItemType Directory -Force -Path $d.Out | Out-Null
             Copy-Item (Join-Path $pkg '*') $d.Out -Force
             Write-Host "==> Freshly built $($d.Name) copied into $($d.Out)"
           }
