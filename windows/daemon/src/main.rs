@@ -61,21 +61,36 @@ fn frame(packet: &[u8]) -> Vec<u8> {
     f
 }
 
+/// ISO 8601 UTC, e.g. `2026-09-30T18:06:02.071Z`. The date and the `Z` are there
+/// so nobody has to guess the time zone when matching log lines with a bug report
+/// or another log (a bare HH:MM:SS in UTC read as an hour off in Portugal).
+fn utc_timestamp(d: std::time::Duration) -> String {
+    let secs = d.as_secs();
+    let (days, tod) = ((secs / 86_400) as i64, secs % 86_400);
+    // Days since 1970-01-01 to a civil date (Howard Hinnant's civil_from_days).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + if month <= 2 { 1 } else { 0 };
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{:03}Z",
+        tod / 3600,
+        (tod % 3600) / 60,
+        tod % 60,
+        d.subsec_millis()
+    )
+}
+
 fn log(s: &str) {
     use std::io::Write;
-    // Wall-clock UTC HH:MM:SS.mmm prefix so log lines can be correlated in time.
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| {
-            let secs = d.as_secs() % 86_400;
-            format!(
-                "{:02}:{:02}:{:02}.{:03}",
-                secs / 3600,
-                (secs % 3600) / 60,
-                secs % 60,
-                d.subsec_millis()
-            )
-        })
+        .map(utc_timestamp)
         .unwrap_or_default();
     if let Ok(la) = std::env::var("LOCALAPPDATA") {
         if let Ok(mut f) = std::fs::OpenOptions::new()
@@ -2236,5 +2251,19 @@ fn main() {
     log("threads spawned; serving events + cmds pipes");
     loop {
         thread::sleep(Duration::from_secs(3600));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::utc_timestamp;
+    use std::time::Duration;
+
+    #[test]
+    fn utc_timestamp_is_iso8601() {
+        assert_eq!(utc_timestamp(Duration::from_secs(0)), "1970-01-01T00:00:00.000Z");
+        assert_eq!(utc_timestamp(Duration::from_secs(951_782_400)), "2000-02-29T00:00:00.000Z");
+        assert_eq!(utc_timestamp(Duration::from_millis(1_790_705_162_071)), "2026-09-29T18:06:02.071Z");
+        assert_eq!(utc_timestamp(Duration::from_secs(1_798_761_599)), "2026-12-31T23:59:59.000Z");
     }
 }

@@ -67,7 +67,7 @@ if (-not $isAdmin) {
 $log = Join-Path $env:LOCALAPPDATA 'NTPods\fix-driver.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 function Log($m) {
-    $line = '{0:HH:mm:ss.fff} {1}' -f (Get-Date), $m
+    $line = '{0:yyyy-MM-ddTHH:mm:ss.fffZ} {1}' -f (Get-Date).ToUniversalTime(), $m  # UTC, like daemon.log
     Add-Content -LiteralPath $log -Value $line
     Write-Host $line
 }
