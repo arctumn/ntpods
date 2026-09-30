@@ -24,7 +24,7 @@ $ErrorActionPreference = 'Stop'
 $dir = Join-Path $env:LOCALAPPDATA 'NTPods'
 $log = Join-Path $dir 'rename.log'
 function Log([string]$msg) {
-    $line = '{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $msg
+    $line = '{0:yyyy-MM-ddTHH:mm:ss.fffZ} {1}' -f (Get-Date).ToUniversalTime(), $msg  # UTC, like daemon.log
     Write-Host $line
     try {
         if ((Test-Path $log) -and (Get-Item $log).Length -gt 256KB) { Clear-Content $log }
