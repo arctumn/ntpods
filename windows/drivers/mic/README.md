@@ -34,9 +34,11 @@ Done and in daily use:
   sample's WAV/tone dummy; an underrun reads as silence.
 - [x] **Bounded latency** — the uplink and the capture timer run on independent
   clocks, so the ring used to creep up to full and stay there, adding its whole
-  capacity (~1.36 s) as a fixed delay. It now trims back to ~32 ms whenever the
-  backlog passes ~64 ms (never below two capture packets), so mic latency stays
-  put instead of drifting. Thanks to [@Gab4545](https://github.com/Gab4545) for
+  capacity (~1.36 s) as a fixed delay. It now trims back to ~100 ms whenever the
+  backlog passes ~160 ms (never below two capture packets), so mic latency stays
+  put instead of drifting. 100 ms covers the uplink's jitter: the AirPods send
+  30 ms per packet, but gaps of up to ~100 ms between packets are normal, and a
+  32 ms target crackled on every late one. Thanks to [@Gab4545](https://github.com/Gab4545) for
   diagnosing it.
 - [x] **Capture-activity counter** — `IOCTL_NTPODS_MIC_STATUS` advances while an
   app records, which is how the daemon auto-starts and auto-stops the AAP uplink.
