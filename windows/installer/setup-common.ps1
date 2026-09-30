@@ -194,10 +194,13 @@ function Install-NTPodsDrivers([string]$root, [string]$work) {
     # NTPodsMic: ROOT-enumerated device, via devcon.
     Write-Host '==> Removing any existing ROOT\AudioCodec (mic) device...'
     Invoke-Tool 'Removing the old mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\AudioCodec' }
+    # Old mic packages pile up in the driver store otherwise (one per install).
+    Remove-MicDriverPackages
     Start-Sleep -Seconds 1
     # The mic driver is built on ACX 1.1 / KMDF 1.31, which only exist from
     # Windows 11 22H2 (build 22621). On older Windows it installs "fine" and then
-    # never loads, so skip it and say why. Everything else works without it.
+    # never loads (Code 37), so skip it and say why. An older NTPods that installed
+    # it anyway is cleaned up by the two steps above. Everything else works without it.
     if (-not (Test-MicSupported)) {
         Write-Host "==> Skipping NTPodsMic: it needs Windows 11 22H2 or newer (this is build $([Environment]::OSVersion.Version.Build)). Battery, noise control and the rest still work." -ForegroundColor Yellow
         return
@@ -215,15 +218,22 @@ function Uninstall-NTPodsDrivers([string]$root) {
         Write-Host '==> Removing the NTPods microphone device...'
         Invoke-Tool 'Removing the mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\AudioCodec' }
     }
-    # The mic INF is named after the WDK sample it came from, so match the provider
-    # too; older builds still carried the sample's VS_Microsoft / LibrePods.
-    foreach ($p in @(@('NTPodsAAP.inf', $null), @('audiocodec.inf', @('NTPods', 'LibrePods', 'VS_Microsoft')))) {
-        foreach ($oem in (Get-DriverPackages $p[0] $p[1])) {
-            Write-Host "==> Removing driver package $oem ($($p[0]))"
-            pnputil /delete-driver $oem /uninstall /force | Out-Null
-        }
+    foreach ($oem in (Get-DriverPackages 'NTPodsAAP.inf')) {
+        Write-Host "==> Removing driver package $oem (NTPodsAAP.inf)"
+        pnputil /delete-driver $oem /uninstall /force | Out-Null
     }
+    Remove-MicDriverPackages
     Remove-TestCert 'CN=NTPods Test Cert'
+}
+
+# Remove the mic driver packages from the driver store. The mic INF is named after
+# the WDK sample it came from, so match the provider too; older builds still
+# carried the sample's VS_Microsoft / LibrePods.
+function Remove-MicDriverPackages {
+    foreach ($oem in (Get-DriverPackages 'audiocodec.inf' @('NTPods', 'LibrePods', 'VS_Microsoft'))) {
+        Write-Host "==> Removing driver package $oem (audiocodec.inf)"
+        pnputil /delete-driver $oem /uninstall /force | Out-Null
+    }
 }
 
 # ---- elevated on-demand helper tasks -----------------------------------------
