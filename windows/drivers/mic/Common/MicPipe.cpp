@@ -47,8 +47,15 @@ Environment:
 // actually bounds latency — one deliberate skip beats a slow creep into a
 // permanent delay.
 //
-#define MIC_RING_HIGH_WATERMARK 0x1800u  // ~64 ms
-#define MIC_RING_TARGET_BYTES   0x0C00u  // ~32 ms
+// The target has to cover the uplink's jitter. The AirPods send 4 AAC-ELD frames
+// (30 ms) per packet, and measured on AirPods Pro 3 (daemon "mic stats", 2026-09-30)
+// the gap between packets was p50 ~27 ms, p95 ~55 ms, p99 ~75 ms, max ~98 ms. The
+// old 32 ms target ran dry on every late packet (zero-fill) and the 64 ms watermark
+// trimmed on every pair that arrived together. Both were audible as a metallic
+// crackle ~5 times a second. 100 ms / 160 ms clears the worst gap measured.
+//
+#define MIC_RING_HIGH_WATERMARK 0x3C00u  // ~160 ms
+#define MIC_RING_TARGET_BYTES   0x2580u  // ~100 ms
 
 static UCHAR      g_Ring[MIC_RING_BYTES];
 static ULONG      g_Head;   // next write index

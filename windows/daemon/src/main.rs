@@ -1117,6 +1117,57 @@ fn apply_command(ctx: &Ctx, cmd: Command) {
     }
 }
 
+/// Arrival timing of the 0x58 mic uplink, summarised to the log every 30 s.
+#[derive(Default)]
+struct MicStats {
+    window_start: Option<Instant>,
+    last: Option<Instant>,
+    packets: u32,
+    aus: u32,
+    samples: usize,
+    gaps_ms: Vec<f64>,
+}
+
+impl MicStats {
+    fn packet(&mut self, aus: u32, samples: usize) {
+        let now = Instant::now();
+        if let Some(prev) = self.last {
+            self.gaps_ms.push(now.duration_since(prev).as_secs_f64() * 1000.0);
+        }
+        self.last = Some(now);
+        let start = *self.window_start.get_or_insert(now);
+        self.packets += 1;
+        self.aus += aus;
+        self.samples += samples;
+        let secs = now.duration_since(start).as_secs_f64();
+        if secs < 30.0 {
+            return;
+        }
+        let mut g = std::mem::take(&mut self.gaps_ms);
+        g.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let pct = |p: f64| g.get(((g.len() as f64 - 1.0) * p) as usize).copied().unwrap_or(0.0);
+        let over = |ms: f64| g.iter().filter(|&&x| x > ms).count();
+        log(&format!(
+            "mic stats: {:.1}s pkts={} aus={} ({:.2}/pkt) rate={:.0} Hz gap ms p50={:.1} p95={:.1} p99={:.1} max={:.1} >64ms={} >100ms={}",
+            secs,
+            self.packets,
+            self.aus,
+            self.aus as f64 / self.packets.max(1) as f64,
+            self.samples as f64 / secs,
+            pct(0.5),
+            pct(0.95),
+            pct(0.99),
+            g.last().copied().unwrap_or(0.0),
+            over(64.0),
+            over(100.0),
+        ));
+        self.window_start = Some(now);
+        self.packets = 0;
+        self.aus = 0;
+        self.samples = 0;
+    }
+}
+
 /// The AAP session: keep the link up, decode the mic, track battery/ANC/ear
 /// detection, and broadcast state + overlay events. (Ported from the tray.)
 fn run_receiver(ctx: Ctx) {
@@ -1127,6 +1178,9 @@ fn run_receiver(ctx: Ctx) {
     // Whether we've announced "mic fully operational" for the current capture session
     // (fires when the buds actually start streaming audio, not just when it's requested).
     let mut mic_announced = false;
+    // Uplink timing, logged every 30 s while the mic is on: the virtual mic's ring
+    // only holds ~100 ms, so arrival gaps longer than that come out as silence.
+    let mut mic_stats = MicStats::default();
     // RTBuddy heart-rate decoder (inert unless `hr_on`). Carry is reset per
     // connection so a partial frame never straddles a reconnect.
     let mut hr_decoder = hr::RtBuddyHeartRateDecoder::new();
@@ -1476,7 +1530,12 @@ fn run_receiver(ctx: Ctx) {
                             }
                             if let Some(dec) = decoder.as_mut() {
                                 let mut out: Vec<i16> = Vec::new();
-                                aap::for_each_au(data, |au| out.extend_from_slice(dec.decode(au)));
+                                let mut aus = 0u32;
+                                aap::for_each_au(data, |au| {
+                                    aus += 1;
+                                    out.extend_from_slice(dec.decode(au))
+                                });
+                                mic_stats.packet(aus, out.len());
                                 if !out.is_empty() {
                                     ctx.pipe.write(&out);
                                     // First real PCM reached the virtual mic — the hi-res
@@ -1491,6 +1550,7 @@ fn run_receiver(ctx: Ctx) {
                     } else if decoder.is_some() {
                         decoder = None;
                         mic_announced = false; // mic released — next session re-announces
+                        mic_stats = MicStats::default();
                     }
                     // Multipoint: the AirPods' own list of connected hosts. This is
                     // the earliest warning we get — in the 2026-08-31 capture the
