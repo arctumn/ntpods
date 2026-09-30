@@ -11,7 +11,8 @@
       * By hand, elevated:   .\rename-mic.ps1 "AirPods Pro de Pedro"
 
     The endpoint is matched by the hardware id of the device behind it
-    (ROOT\AudioCodec), not by its name, so it still matches after a rename. The
+    (ROOT\NTPodsMicPC, or ROOT\AudioCodec for the old ACX mic), not by its
+    name, so it still matches after a rename. The
     name lives in PKEY_Device_DeviceDesc; Windows shows "<DeviceDesc> (<interface
     name>)". Idempotent: when the name is already right it changes nothing and
     does NOT restart the audio service, so the daemon can fire it on every connect.
@@ -71,7 +72,7 @@ try {
             $iface = Read-Str $props $ifKey
             $desc  = Read-Str $props $descKey
         } finally { $props.Close() }
-        if ($hw -ne 'ROOT\AudioCodec' -and $iface -notlike '*NTPods*') { continue }
+        if ($hw -notin 'ROOT\NTPodsMicPC', 'ROOT\AudioCodec' -and $iface -notlike '*NTPods*') { continue }
 
         $matched++
         if ($desc -ceq $Name) { Log "$id already '$Name'"; continue }

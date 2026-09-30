@@ -58,8 +58,8 @@ pub struct Snapshot {
     /// An app is currently recording from the virtual mic (hi-res stream on).
     pub mic_recording: bool,
     /// The virtual mic driver is loaded (its NTPodsMic control device opens).
-    /// False on Windows before 11 22H2, where the ACX mic driver can't load, or
-    /// when its install failed; the app then greys out the mic controls.
+    /// False on Windows before 10 2004, where the installer skips the mic driver,
+    /// or when its install failed; the app then greys out the mic controls.
     /// (serde default: older snapshots.)
     #[serde(default)]
     pub mic_available: bool,

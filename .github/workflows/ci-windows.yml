@@ -57,8 +57,8 @@ jobs:
         with:
           path: |
             windows/drivers/aap/prebuilt
-            windows/drivers/mic/prebuilt
-          key: drivers-v1-${{ hashFiles('windows/drivers/**') }}
+            windows/drivers/mic-portcls/prebuilt
+          key: drivers-v2-${{ hashFiles('windows/drivers/**') }}
 
       # ---- Kernel drivers (WDK) ------------------------------------------------
       # A source change under windows/drivers/* only reaches users if the shipped
@@ -98,7 +98,7 @@ jobs:
           # the .inf and fails the signability test — the catalog is made below.
           & $msbuild windows/drivers/aap/NTPodsAAP.vcxproj /p:Configuration=Release /p:Platform=x64 /p:EnableInf2cat=false /m
           if ($LASTEXITCODE) { throw "AAP driver build failed (exit $LASTEXITCODE)" }
-          & $msbuild windows/drivers/mic/AudioCodec/Driver/AudioCodec.sln /p:Configuration=Release /p:Platform=x64 /m
+          & $msbuild windows/drivers/mic-portcls/NTPodsMicPC.vcxproj /p:Configuration=Release /p:Platform=x64 /m
           if ($LASTEXITCODE) { throw "Mic driver build failed (exit $LASTEXITCODE)" }
 
       - name: Regenerate driver catalogs + refresh the prebuilt packages
@@ -116,9 +116,9 @@ jobs:
                         Where-Object { $_.FullName -match '\\x64\\Release\\' -and $_.FullName -notmatch '\\prebuilt\\' } |
                         Select-Object -First 1).FullName
                Out = 'windows/drivers/aap/prebuilt' },
-            @{ Name = 'AudioCodec'; Inf = 'windows/drivers/mic/AudioCodec/Driver/x64/Release/AudioCodec.inf'; Cat = 'audiocodec.cat'
-               Sys = 'windows/drivers/mic/AudioCodec/Driver/x64/Release/AudioCodec.sys'
-               Out = 'windows/drivers/mic/prebuilt' }
+            @{ Name = 'NTPodsMicPC'; Inf = 'windows/drivers/mic-portcls/x64/Release/NTPodsMicPC.inf'; Cat = 'ntpodsmicpc.cat'
+               Sys = 'windows/drivers/mic-portcls/x64/Release/NTPodsMicPC.sys'
+               Out = 'windows/drivers/mic-portcls/prebuilt' }
           )
           foreach ($d in $drivers) {
             foreach ($f in @($d.Sys, $d.Inf)) { if (-not $f -or -not (Test-Path $f)) { throw "$($d.Name): missing '$f' after build" } }

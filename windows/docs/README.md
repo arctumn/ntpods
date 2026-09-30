@@ -15,7 +15,8 @@ that each feature needed.
 
 Setup and usage live in the **[Windows README](../README.md)**; the drivers have
 their own notes in [`../drivers/aap`](../drivers/aap) and
-[`../drivers/mic`](../drivers/mic).
+[`../drivers/mic-portcls`](../drivers/mic-portcls) (the old ACX mic, no longer
+shipped, is in [`../drivers/mic`](../drivers/mic)).
 
 ## Other platforms
 - **Linux** — [`linux/README.md`](../../linux/README.md) (BlueZ/PipeWire, no

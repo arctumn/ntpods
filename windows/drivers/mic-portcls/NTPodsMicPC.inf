@@ -1,6 +1,6 @@
 ;
 ; NTPodsMicPC.inf — NTPods virtual microphone on PortCls/WaveRT (Windows 10 and 11).
-; Experiment for issue #14; see common.h.
+; Replaces the ACX mic (Windows 11 22H2+ only), see issue #14 and common.h.
 ;
 
 [Version]

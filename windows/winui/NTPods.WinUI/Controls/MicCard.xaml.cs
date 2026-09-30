@@ -33,12 +33,12 @@ public sealed partial class MicCard : UserControl
             MicAutoSwitch.IsOn = s.AutoMode;
             MicManualToggle.IsChecked = s.MicRecording && !s.AutoMode;
             // No virtual mic driver: grey the controls out and say why. Before
-            // Windows 11 22H2 the ACX mic driver can't load at all.
+            // Windows 10 2004 the mic driver doesn't install at all.
             MicAutoSwitch.IsEnabled = s.MicAvailable;
             MicManualToggle.IsEnabled = s.MicAvailable;
             MicStatusText.Text = Localize.Get(
                 s.MicAvailable ? (s.MicRecording ? "Mic_Recording" : "Mic_Idle")
-                : Environment.OSVersion.Version.Build < 22621 ? "Mic_NeedsWin11" : "Mic_NotLoaded");
+                : Environment.OSVersion.Version.Build < 19041 ? "Mic_NeedsNewerWindows" : "Mic_NotLoaded");
         }
         finally
         {

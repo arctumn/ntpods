@@ -2,6 +2,7 @@
 {\b\fs22 Before you install NTPods}\par\par
 NTPods uses two drivers of its own: one that talks to the AirPods and a virtual microphone. They are not signed by Microsoft, so this installer signs them with a test certificate made on this PC. Windows only loads drivers signed that way in {\b Test Mode}.\par\par
 If you got this far, Test Mode is already on. Keep it on while you use NTPods. Turning it off, or turning Secure Boot back on, stops the drivers from loading.\par\par
+{\b BitLocker:} changing Secure Boot or Test Mode can make Windows ask for your BitLocker recovery key at the next boot. If BitLocker is on, make sure that key is saved somewhere other than this PC before you go on (https://aka.ms/myrecoverykey, or in an admin terminal: manage-bde -protectors -get C:).\par\par
 The installer puts NTPods in Program Files, installs both drivers, and adds two scheduled tasks that NTPods uses to fix the driver and rename the microphone without asking for admin rights every time. Your settings and heart-rate history stay in %LOCALAPPDATA%\NTPods. Uninstalling removes the drivers, the tasks and the test certificate, and keeps that folder.\par\par
 Restart your PC when the installer asks, then connect your AirPods.\par\par
 {\b License}\par

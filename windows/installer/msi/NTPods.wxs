@@ -31,7 +31,7 @@
                       Name="SystemStartOptions" Type="raw" />
     </Property>
     <Launch Condition="Installed OR (BOOTOPTIONS ~&gt;&lt; &quot;TESTSIGNING&quot;)"
-            Message="Test Mode is not on, so Windows would refuse to load the NTPods drivers.&#13;&#10;&#13;&#10;1. Back up your BitLocker recovery key (if BitLocker is on).&#13;&#10;2. Turn off Secure Boot in your firmware/BIOS.&#13;&#10;3. In an admin terminal run:  bcdedit /set testsigning on&#13;&#10;4. Reboot (&quot;Test Mode&quot; shows in the bottom-right corner) and run this installer again." />
+            Message="Test Mode is not on, so Windows would refuse to load the NTPods drivers.&#13;&#10;&#13;&#10;1. If BitLocker is on, save your recovery key first (https://aka.ms/myrecoverykey or: manage-bde -protectors -get C:). Changing Secure Boot or Test Mode can make Windows ask for it at the next boot.&#13;&#10;2. Turn off Secure Boot in your firmware/BIOS.&#13;&#10;3. In an admin terminal run:  bcdedit /set testsigning on&#13;&#10;4. Reboot (&quot;Test Mode&quot; shows in the bottom-right corner) and run this installer again." />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="NTPods" />

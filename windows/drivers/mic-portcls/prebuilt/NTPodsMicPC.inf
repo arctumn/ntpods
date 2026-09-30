@@ -1,0 +1,103 @@
+;
+; NTPodsMicPC.inf — NTPods virtual microphone on PortCls/WaveRT (Windows 10 and 11).
+; Replaces the ACX mic (Windows 11 22H2+ only), see issue #14 and common.h.
+;
+
+[Version]
+Signature   = "$Windows NT$"
+Class       = MEDIA
+ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider    = %ProviderName%
+DriverVer = 09/30/2026,18.55.30.430
+CatalogFile = ntpodsmicpc.cat
+PnpLockDown = 1
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+NTPodsMicPC.sys = 1
+
+[DestinationDirs]
+NTPodsMicPC.CopyList = 13
+
+; ExAllocatePool2 needs Windows 10 2004 (build 19041) or newer.
+[Manufacturer]
+%MfgName% = NTPods, NTamd64.10.0...19041
+
+[NTPods.NTamd64.10.0...19041]
+%DeviceDesc% = NTPodsMicPC, ROOT\NTPodsMicPC
+
+[NTPodsMicPC.CopyList]
+NTPodsMicPC.sys
+
+[NTPodsMicPC.NT]
+Include    = ks.inf, wdmaudio.inf
+Needs      = KS.Registration, WDMAUDIO.Registration
+CopyFiles  = NTPodsMicPC.CopyList
+AddReg     = NTPodsMicPC.AddReg
+
+[NTPodsMicPC.AddReg]
+HKR,,AssociatedFilters,,"wdmaud,swmidi,redbook"
+HKR,,Driver,,NTPodsMicPC.sys
+HKR,Drivers,SubClasses,,"wave,mixer"
+HKR,Drivers\wave\wdmaud.drv,Driver,,wdmaud.drv
+HKR,Drivers\mixer\wdmaud.drv,Driver,,wdmaud.drv
+HKR,Drivers\wave\wdmaud.drv,Description,,%DeviceDesc%
+HKR,Drivers\mixer\wdmaud.drv,Description,,%DeviceDesc%
+
+[NTPodsMicPC.NT.Interfaces]
+AddInterface = %KSCATEGORY_AUDIO%,    %KSNAME_Wave%,     NTPodsMicPC.I.Wave
+AddInterface = %KSCATEGORY_REALTIME%, %KSNAME_Wave%,     NTPodsMicPC.I.Wave
+AddInterface = %KSCATEGORY_CAPTURE%,  %KSNAME_Wave%,     NTPodsMicPC.I.Wave
+AddInterface = %KSCATEGORY_AUDIO%,    %KSNAME_Topology%, NTPodsMicPC.I.Topology
+AddInterface = %KSCATEGORY_TOPOLOGY%, %KSNAME_Topology%, NTPodsMicPC.I.Topology
+
+[NTPodsMicPC.I.Wave]
+AddReg = NTPodsMicPC.I.Wave.AddReg
+[NTPodsMicPC.I.Wave.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%WaveName%
+
+[NTPodsMicPC.I.Topology]
+AddReg = NTPodsMicPC.I.Topology.AddReg
+[NTPodsMicPC.I.Topology.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%TopoName%
+
+[NTPodsMicPC.NT.Services]
+AddService = NTPodsMicPC, 0x00000002, NTPodsMicPC.Service
+
+[NTPodsMicPC.Service]
+DisplayName   = %SvcDesc%
+ServiceType   = 1   ; SERVICE_KERNEL_DRIVER
+StartType     = 3   ; SERVICE_DEMAND_START
+ErrorControl  = 1   ; SERVICE_ERROR_NORMAL
+ServiceBinary = %13%\NTPodsMicPC.sys
+
+[NTPodsMicPC.NT.HW]
+AddReg = NTPodsMicPC.HW.AddReg
+
+[NTPodsMicPC.HW.AddReg]
+HKR,,DeviceType,0x10001,0x0000001D     ; FILE_DEVICE_SOUND
+HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GRGWGX;;;BA)(A;;GRGWGX;;;WD)(A;;GRGWGX;;;RC)"
+
+[Strings]
+; Non-localizable
+KSNAME_Wave         = "Wave"
+KSNAME_Topology     = "Topology"
+Proxy.CLSID         = "{17CCA71B-ECD7-11D0-B908-00A0C9223196}"
+KSCATEGORY_AUDIO    = "{6994AD04-93EF-11D0-A3CC-00A0C9223196}"
+KSCATEGORY_CAPTURE  = "{65E8773D-8F56-11D0-A3B9-00A0C9223196}"
+KSCATEGORY_REALTIME = "{EB115FFC-10C8-4964-831D-6DCB02E6F23F}"
+KSCATEGORY_TOPOLOGY = "{DDA54A40-1E4C-11D1-A050-405705C10000}"
+
+; Localizable
+ProviderName = "NTPods"
+MfgName      = "NTPods"
+DiskName     = "NTPods Mic (PortCls) Disk"
+DeviceDesc   = "NTPods"
+SvcDesc      = "NTPods virtual microphone (PortCls)"
+WaveName     = "NTPods"
+TopoName     = "NTPods"
+
