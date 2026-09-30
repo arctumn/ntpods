@@ -1132,7 +1132,14 @@ impl MicStats {
     fn packet(&mut self, aus: u32, samples: usize) {
         let now = Instant::now();
         if let Some(prev) = self.last {
-            self.gaps_ms.push(now.duration_since(prev).as_secs_f64() * 1000.0);
+            let gap = now.duration_since(prev).as_secs_f64() * 1000.0;
+            if gap > 1000.0 {
+                // The uplink paused (mic stays on between recordings): start a new
+                // window rather than count the idle time as one huge gap.
+                *self = MicStats::default();
+            } else {
+                self.gaps_ms.push(gap);
+            }
         }
         self.last = Some(now);
         let start = *self.window_start.get_or_insert(now);
