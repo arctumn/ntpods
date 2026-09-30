@@ -70,6 +70,23 @@ function Set-RunValues([string]$userSid, [string]$daemonExe, [string]$winuiExe) 
     Set-ItemProperty $key -Name 'NTPods' -Value "`"$winuiExe`" --tray"
 }
 
+# Remove every copy of a test certificate from the machine stores. Uses the
+# X509Store API (the same one that adds them): piping the Cert: provider into
+# Remove-Item left all of them in place when run as SYSTEM from the MSI.
+function Remove-TestCert([string]$subject) {
+    foreach ($name in 'My', 'Root', 'TrustedPublisher') {
+        $s = New-Object System.Security.Cryptography.X509Certificates.X509Store($name, 'LocalMachine')
+        try {
+            $s.Open('ReadWrite')
+            $old = @($s.Certificates | Where-Object { $_.Subject -eq $subject })
+            foreach ($c in $old) { $s.Remove($c) }
+            if ($old) { Write-Host "==> Removed $($old.Count) '$subject' from $name" }
+        } catch {
+            Write-Warning "Could not clean '$subject' from ${name}: $_"
+        } finally { $s.Close() }
+    }
+}
+
 # ---- older installs -----------------------------------------------------------
 # NTPods used to be called LibrePods (for Windows). Keep the user's settings and
 # heart-rate history, and remove the old driver, tasks, startup entries and test
@@ -97,11 +114,7 @@ function Remove-LegacyLibrePods([string]$userSid, [string]$localAppData, [string
         Write-Host "==> Removing the old LibrePods AAP driver ($oem)"
         pnputil /delete-driver $oem /uninstall /force | Out-Null
     }
-    foreach ($store in 'My', 'Root', 'TrustedPublisher') {
-        Get-ChildItem "Cert:\LocalMachine\$store" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Subject -eq 'CN=LibrePods Test Cert' } |
-            Remove-Item -Force -ErrorAction SilentlyContinue
-    }
+    Remove-TestCert 'CN=LibrePods Test Cert'
     if (Test-Path $legacy) { Remove-Item $legacy -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
@@ -198,11 +211,7 @@ function Uninstall-NTPodsDrivers([string]$root) {
             pnputil /delete-driver $oem /uninstall /force | Out-Null
         }
     }
-    foreach ($store in 'My', 'Root', 'TrustedPublisher') {
-        Get-ChildItem "Cert:\LocalMachine\$store" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Subject -eq 'CN=NTPods Test Cert' } |
-            Remove-Item -Force -ErrorAction SilentlyContinue
-    }
+    Remove-TestCert 'CN=NTPods Test Cert'
 }
 
 # ---- elevated on-demand helper tasks -----------------------------------------
