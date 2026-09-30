@@ -26,6 +26,12 @@ on:
       - '.github/workflows/ci-windows.yml'
   workflow_dispatch:
 
+# A new push to a PR makes its older run pointless: cancel it. Runs on main are
+# left alone so every merge still publishes its nightly.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     # Pinned to windows-2022: windows-latest moved to Windows Server 2025 + VS2026,
@@ -41,6 +47,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The drivers only change when their source does. The WDK install and the
+      # driver build below take ~4 of the ~9 minutes, so cache what they produce
+      # (the refreshed prebuilt packages) by a hash of windows/drivers/** and skip
+      # all four driver steps on a hit. Bump the v1 when the build steps change.
+      - name: Cache built drivers
+        id: drivers
+        uses: actions/cache@v4
+        with:
+          path: |
+            windows/drivers/aap/prebuilt
+            windows/drivers/mic/prebuilt
+          key: drivers-v1-${{ hashFiles('windows/drivers/**') }}
+
       # ---- Kernel drivers (WDK) ------------------------------------------------
       # A source change under windows/drivers/* only reaches users if the shipped
       # .sys is rebuilt — e.g. the AAP channel's 1691-byte MTU that heart rate needs.
@@ -50,11 +69,13 @@ jobs:
       # "Assemble install folder" step below bundles the fresh builds.
       # windows-2022 doesn't ship winget — install it first.
       - name: Install winget
+        if: steps.drivers.outputs.cache-hit != 'true'
         uses: Cyberboss/install-winget@v1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Windows SDK + WDK (winget)
+        if: steps.drivers.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           foreach ($id in 'Microsoft.WindowsSDK.10.0.26100', 'Microsoft.WindowsWDK.10.0.26100') {
@@ -65,6 +86,7 @@ jobs:
           }
 
       - name: Build drivers (KMDF, x64 Release)
+        if: steps.drivers.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -80,6 +102,7 @@ jobs:
           if ($LASTEXITCODE) { throw "Mic driver build failed (exit $LASTEXITCODE)" }
 
       - name: Regenerate driver catalogs + refresh the prebuilt packages
+        if: steps.drivers.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $inf2cat = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter Inf2Cat.exe |
@@ -115,13 +138,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            windows/daemon/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('windows/**/Cargo.lock') }}
+          workspaces: windows/daemon -> target
 
       - name: Fetch FFmpeg (AAC-ELD decode libs — not vendored in git)
         shell: bash
@@ -150,6 +169,13 @@ jobs:
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('windows/winui/**/*.csproj') }}
+          restore-keys: nuget-
 
       - name: Restore WinUI app
         working-directory: windows/winui
@@ -184,11 +210,22 @@ jobs:
       # ---- MSI (WiX 5) -------------------------------------------------------
       # Same dist folder, wrapped in a normal setup wizard. MSI versions must be
       # numeric: a windows-vX.Y.Z tag gives X.Y.Z, everything else 0.1.<run number>.
+      - name: Cache WiX
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.dotnet/tools
+            ~/.wix
+          key: wix-5.0.2
+
       - name: Build MSI
         shell: pwsh
         run: |
-          dotnet tool install --global wix --version 5.0.2
           $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
+          if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
+            dotnet tool install --global wix --version 5.0.2
+          }
+          # A no-op when the cache already has them.
           wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
           $version = '0.1.${{ github.run_number }}'
           if ('${{ github.ref }}' -match '^refs/tags/windows-v(\d+\.\d+\.\d+)$') { $version = $matches[1] }
