@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo.png" alt="NTPods logo" width="160"></p>
+
 # NTPods
 
 Control your AirPods from a Windows PC: battery, noise control, ear detection,
