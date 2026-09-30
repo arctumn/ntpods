@@ -57,7 +57,7 @@ The channel is also opened `CF_LINK_AUTHENTICATED | CF_LINK_ENCRYPTED`, like the
 socket upstream android/rewrite opens. Heart rate was verified in that
 configuration. Whether it strictly needs those flags, or only the MTU, is not yet
 isolated. On Linux, an unencrypted AAP socket is known to suppress the AAP
-notification stream (librepods-org#617).
+notification stream (from LibrePods, librepods-org/librepods#617).
 
 ## What the daemon sends
 

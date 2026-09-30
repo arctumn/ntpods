@@ -1994,6 +1994,11 @@ fn main() {
         }
     }
 
+    // The data folder (log, heart-rate db, mic name). The MSI installs the exes in
+    // Program Files and never creates it, so make sure it exists before logging.
+    if let Ok(la) = std::env::var("LOCALAPPDATA") {
+        let _ = std::fs::create_dir_all(format!("{la}\\NTPods"));
+    }
     log("=== ntpodsd start ===");
     let (mac, dev_name) = match bt::find_airpods() {
         Some((m, n)) => (m, n),

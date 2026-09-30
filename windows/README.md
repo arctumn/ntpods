@@ -39,12 +39,29 @@ shown depend on the model (e.g. only Pro/Max have noise control).
 3. In an **admin** PowerShell: `bcdedit /set testsigning on` → **reboot**.
    You should see "Test Mode" in the bottom-right of the desktop.
 
-### b) Install — the one-shot way (recommended)
-Download **`NTPods-Windows.zip`** from the
+### b) Install with the MSI (recommended)
+Download **`NTPods.msi`** from the
 [`nightly` release](https://github.com/arctumn/ntpods/releases/tag/nightly)
-(rebuilt on every push to `main`; or build it yourself with
-[`installer/make-dist.ps1`](installer/make-dist.ps1)), extract it, and run
-[`installer/install.ps1`](installer/install.ps1) from an **admin** PowerShell
+(rebuilt on every push to `main`) and run it. It stops if Test Mode isn't on.
+You can choose:
+
+- **Drivers**: test-signs and installs both drivers on this PC. Leave it on.
+- **Desktop shortcut**
+- **Start with Windows**: starts NTPods in the tray when you sign in (you can
+  change this later in the app's settings).
+
+It installs to `C:\Program Files\NTPods`, registers the driver-recovery and
+mic-rename tasks, and takes over an older LibrePods or zip install (your settings
+and heart-rate history are kept). Restart when it asks. Uninstall from
+**Settings ▸ Apps**; that also removes the drivers, the tasks and the test
+certificate. If something fails, the log is in `%ProgramData%\NTPods\setup.log`.
+
+To build the MSI yourself: [`installer/msi/build-msi.ps1`](installer/msi/build-msi.ps1)
+(WiX 5) on a folder made by [`installer/make-dist.ps1`](installer/make-dist.ps1).
+
+### b2) Install from the zip
+**`NTPods-Windows.zip`** on the same release has the same files. Extract it and
+run [`installer/install.ps1`](installer/install.ps1) from an **admin** PowerShell
 inside the extracted folder:
 
 ```powershell

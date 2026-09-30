@@ -57,6 +57,8 @@ public static class StartupService
         string[] candidates =
         {
             Path.Combine(AppContext.BaseDirectory, "ntpodsd.exe"),
+            // MSI layout: ntpodsd.exe sits one folder up, next to winui\.
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "ntpodsd.exe")),
             Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "NTPods", "ntpodsd.exe"),

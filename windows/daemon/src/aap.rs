@@ -12,7 +12,7 @@ pub const REQUEST_NOTIFS: [u8; 10] =
     [0x04, 0x00, 0x04, 0x00, 0x0F, 0x00, 0xFF, 0xFF, 0xFF, 0xFF];
 
 /// Enable the hi-res (AAC-ELD) microphone stream — the AirPods start pushing
-/// 0x58 uplink audio packets. From LibrePods PR #655.
+/// 0x58 uplink audio packets. Taken from LibrePods PR #655.
 pub const START_AUDIO: [u8; 19] = [
     0x04, 0x00, 0x04, 0x00, 0x58, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x01, 0x82, 0x00, 0x00, 0x00,
     0x04, 0x96, 0x00,
@@ -146,7 +146,7 @@ pub fn sensor_stream(seq: u16, stream_id: u8, period_us: u32) -> [u8; 28] {
     ]
 }
 
-/// Kavish's confirmed-working heart-rate START frame (LibrePods maintainer, Discord
+/// Kavish's confirmed-working heart-rate START frame (from the LibrePods maintainer, Discord
 /// 2026-08-13: "this is what finally worked for me"). On newer AirPods Pro 3 firmware
 /// the HR service id MOVED: it's now **84 (0x54)**, not 19 (0x13) — and the top-level
 /// message carries an extra field-2=2 vs the generic `sensor_stream`. 1 Hz (period

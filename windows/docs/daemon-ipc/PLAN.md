@@ -2,12 +2,12 @@
 
 > **Status: done and shipped.** `ntpodsd` owns the drivers, the AAP session and
 > the mic pipeline; the WinUI app is a thin IPC client. The two Rust front-ends this
-> plan was written against (`librepods-tray.exe` and the iced `librepods.exe`) no
+> plan was written against (the old Rust tray and the iced app) no
 > longer exist on Windows — read their names below as history. See the Status
 > section at the bottom for where things actually landed.
 
-**Goal:** kill the exclusive-driver tug-of-war. Today both `librepods-tray.exe`
-and `librepods.exe` want the single, **exclusive** driver handle, so only one can
+**Goal:** kill the exclusive-driver tug-of-war. Today both the old tray
+and the iced app want the single, **exclusive** driver handle, so only one can
 run — hence the fragile "Open App" handoff, lingering daemon/zombie processes,
 and duplicated AAP code in two binaries.
 
@@ -17,9 +17,9 @@ clients**. They can run **at the same time**, nobody fights over the handle, and
 battery/mic keep working even with no UI open.
 
 ```
-                 ┌─ librepods-tray.exe   (UI client, light)
+                 ┌─ old tray           (UI client, light)
 ntpodsd.exe ──┤       IPC: \\.\pipe\NTPods  (NDJSON)
-(owns the driver)└─ librepods.exe        (UI client, iced GUI)
+(owns the driver)└─ iced app           (UI client, iced GUI)
 ```
 
 ## Components
@@ -31,11 +31,11 @@ ntpodsd.exe ──┤       IPC: \\.\pipe\NTPods  (NDJSON)
   server. Single-instance (named mutex).
 - **`ntpods-ipc`** (new lib crate) — the shared `Command` / `Event` serde
   types + a tiny NDJSON framing helper, so daemon and clients agree on the wire.
-- **`librepods-tray`** (refactored) — pure UI client: connects to the pipe
+- **the old tray** (refactored) — pure UI client: connects to the pipe
   (spawns the daemon if absent), renders the icon/menu/overlay from daemon
   events, sends commands. Its `driver`/`aap`/`eld`/`micpipe`/`a2dp` modules
   **move into the daemon**.
-- **`librepods.exe`** (app, Windows) — becomes an IPC client too
+- **the iced app** (Windows) — becomes an IPC client too
   (Phase 3): its `platform/windows` backend talks to the daemon instead of the
   driver directly. On **Linux nothing changes** (still `bluer`, no daemon).
 
@@ -123,7 +123,7 @@ ntpodsd.exe ──┤       IPC: \\.\pipe\NTPods  (NDJSON)
 
 ## Phase 3 — the "web-app" model (historical)
 
-The original Phase 3 was to make the iced `librepods.exe` a client too, so tray and
+The original Phase 3 was to make the iced app a client too, so tray and
 app could coexist with the daemon as the single arbiter — every action atomic and
 serialized through the server, no dual AAP sessions. That framing still describes
 the architecture; it was reached by writing the **WinUI 3 client** instead of

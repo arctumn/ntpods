@@ -151,7 +151,7 @@ OS display language selects the match at runtime. `en-US` stays the fallback
 
 ## Visual identity
 
-The UI follows the LibrePods look (Android app + iced app), adapted to native
+The UI look comes from LibrePods (Android app + iced app), adapted to native
 Fluent: a **Mica** backdrop, rounded cards for the device/battery/sections, the
 AirPods product image in the device header, and the NTPods brand accent
 (`#039BE5`, the Android app's `light_blue_600`) applied to the progress bars and

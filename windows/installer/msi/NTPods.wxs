@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    NTPods.msi — built by build-msi.ps1 from a make-dist.ps1 folder:
+        wix build NTPods.wxs -arch x64 -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext
+            -d DistDir=<dist> -d Version=<x.y.z> -o NTPods.msi
+
+    Installs to Program Files. The real work (test-signing and installing the two
+    drivers, the elevated helper tasks, taking over older installs) is done by
+    msi-setup.ps1, the same steps install.ps1 runs for the zip install.
+    Settings, logs and heart-rate history stay in %LOCALAPPDATA%\NTPods.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="NTPods" Manufacturer="NTPods" Version="$(Version)"
+           UpgradeCode="6F0B2D57-4C1E-4E8B-9C2F-6E7A1D3B5A90"
+           Scope="perMachine" Compressed="yes" Language="1033">
+
+    <MajorUpgrade Schedule="afterInstallInitialize"
+                  DowngradeErrorMessage="A newer version of NTPods is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="NTPodsIcon" SourceFile="$(IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="NTPodsIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/arctumn/ntpods" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/arctumn/ntpods/issues" />
+
+    <!-- The drivers are test-signed, so Windows only loads them in Test Mode. -->
+    <Property Id="BOOTOPTIONS">
+      <RegistrySearch Id="BootOptions" Root="HKLM" Key="SYSTEM\CurrentControlSet\Control"
+                      Name="SystemStartOptions" Type="raw" />
+    </Property>
+    <Launch Condition="Installed OR (BOOTOPTIONS ~&gt;&lt; &quot;TESTSIGNING&quot;)"
+            Message="Test Mode is not on, so Windows would refuse to load the NTPods drivers.&#13;&#10;&#13;&#10;1. Back up your BitLocker recovery key (if BitLocker is on).&#13;&#10;2. Turn off Secure Boot in your firmware/BIOS.&#13;&#10;3. In an admin terminal run:  bcdedit /set testsigning on&#13;&#10;4. Reboot (&quot;Test Mode&quot; shows in the bottom-right corner) and run this installer again." />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="NTPods" />
+    </StandardDirectory>
+
+    <!-- Everything make-dist.ps1 assembled, except the zip installer itself. -->
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(DistDir)\**">
+        <Exclude Files="$(DistDir)\install.ps1" />
+      </Files>
+    </ComponentGroup>
+
+    <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder" Guid="3B8E4C21-7D5A-4F0E-A1C6-2D9B8E5F7A13">
+      <Shortcut Id="StartMenuNTPods" Name="NTPods" Description="AirPods on Windows"
+                Target="[INSTALLFOLDER]winui\ntpods-winui.exe" WorkingDirectory="WinuiDir" Icon="NTPodsIcon" />
+      <RegistryValue Root="HKLM" Key="Software\NTPods" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="9C4A1E6B-2F8D-4B3A-8E7C-5D1F0A2B6C84">
+      <Shortcut Id="DesktopNTPods" Name="NTPods" Description="AirPods on Windows"
+                Target="[INSTALLFOLDER]winui\ntpods-winui.exe" WorkingDirectory="WinuiDir" Icon="NTPodsIcon" />
+      <RegistryValue Root="HKLM" Key="Software\NTPods" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- The same Run values the app's own "Start with Windows" setting uses, so the
+         two stay in sync. -->
+    <Component Id="StartWithWindows" Directory="INSTALLFOLDER" Guid="E2D7B5A3-6C1F-4A9E-B8D4-7F3C2E1A0B95">
+      <RegistryValue Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="NTPods Daemon"
+                     Type="string" Value="&quot;[INSTALLFOLDER]ntpodsd.exe&quot;" KeyPath="yes" />
+      <RegistryValue Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="NTPods"
+                     Type="string" Value="&quot;[INSTALLFOLDER]winui\ntpods-winui.exe&quot; --tray" />
+    </Component>
+
+    <!-- Holds no files: selecting it is what makes msi-setup.ps1 install the drivers. -->
+    <Component Id="DriversMarker" Directory="INSTALLFOLDER" Guid="5A0E3F82-1B7C-4D6E-9F2A-8C4B7D3E1F06">
+      <RegistryValue Root="HKLM" Key="Software\NTPods" Name="Drivers" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Directory Id="WinuiDir" Name="winui" />
+    </DirectoryRef>
+
+    <Feature Id="Main" Title="NTPods" AllowAbsent="no" Display="expand" ConfigurableDirectory="INSTALLFOLDER"
+             Description="The app, its background service and a Start menu entry.">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+
+      <Feature Id="Drivers" Title="Drivers"
+               Description="The AirPods driver and the NTPods microphone, test-signed on this PC. NTPods needs them; only leave this off if they are already installed.">
+        <ComponentRef Id="DriversMarker" />
+      </Feature>
+      <Feature Id="Desktop" Title="Desktop shortcut" Description="An NTPods shortcut on the desktop.">
+        <ComponentRef Id="DesktopShortcut" />
+      </Feature>
+      <Feature Id="Startup" Title="Start with Windows"
+               Description="Start NTPods in the tray when you sign in. You can change this later in the app's settings.">
+        <ComponentRef Id="StartWithWindows" />
+      </Feature>
+    </Feature>
+
+    <!-- ==== custom actions (msi-setup.ps1, elevated, as SYSTEM) ==== -->
+    <!-- Folder properties end in "\", which would escape the closing quote on the
+         command line, hence the trailing "." -->
+
+    <SetProperty Action="SetNTPodsInstallDrv" Id="NTPodsInstall" Sequence="execute" Before="NTPodsInstall"
+                 Condition="&amp;Drivers=3" Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]msi-setup.ps1&quot; -Action install -UserSid [UserSID] -LocalAppData &quot;[LocalAppDataFolder].&quot; -AppData &quot;[AppDataFolder].&quot; -Drivers" />
+    <SetProperty Action="SetNTPodsInstall" Id="NTPodsInstall" Sequence="execute" Before="NTPodsInstall"
+                 Condition="NOT (&amp;Drivers=3)" Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]msi-setup.ps1&quot; -Action install -UserSid [UserSID] -LocalAppData &quot;[LocalAppDataFolder].&quot; -AppData &quot;[AppDataFolder].&quot;" />
+    <SetProperty Id="NTPodsStop" Sequence="execute" Before="NTPodsStop" Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]msi-setup.ps1&quot; -Action stop" />
+    <SetProperty Id="NTPodsRemoveDrivers" Sequence="execute" Before="NTPodsRemoveDrivers" Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]msi-setup.ps1&quot; -Action remove-drivers" />
+    <SetProperty Id="NTPodsUninstall" Sequence="execute" Before="NTPodsUninstall" Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]msi-setup.ps1&quot; -Action uninstall -UserSid [UserSID] -LocalAppData &quot;[LocalAppDataFolder].&quot; -AppData &quot;[AppDataFolder].&quot;" />
+
+    <CustomAction Id="NTPodsInstall" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
+                  Execute="deferred" Impersonate="no" Return="check" />
+    <CustomAction Id="NTPodsStop" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+    <CustomAction Id="NTPodsRemoveDrivers" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+    <CustomAction Id="NTPodsUninstall" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+
+    <InstallExecuteSequence>
+      <!-- Before files are replaced or removed, stop the running copy (the script is
+           still there: it is only removed by RemoveFiles). -->
+      <Custom Action="NTPodsStop" Before="RemoveFiles" Condition="Installed" />
+      <Custom Action="NTPodsRemoveDrivers" After="NTPodsStop"
+              Condition="(&amp;Drivers=2) AND (!Drivers=3) AND NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="NTPodsUninstall" After="NTPodsRemoveDrivers"
+              Condition="(REMOVE~=&quot;ALL&quot;) AND NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="NTPodsInstall" After="InstallFiles" Condition="NOT (REMOVE~=&quot;ALL&quot;)" />
+      <ScheduleReboot After="InstallFinalize" Condition="(&amp;Drivers=3) AND NOT (REMOVE~=&quot;ALL&quot;)" />
+    </InstallExecuteSequence>
+
+    <!-- ==== UI: welcome, notes, feature tree (with install folder), progress ==== -->
+    <ui:WixUI Id="WixUI_FeatureTree" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(sys.SOURCEFILEDIR)License.rtf" />
+  </Package>
+</Wix>

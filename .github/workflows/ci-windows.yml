@@ -7,7 +7,7 @@ name: Windows CI (frontend)
 # Windows SDK, no VC++ redistributable).
 #
 # The two kernel drivers (AAP L2CAP + hi-res mic) are built here from source with
-# the WDK (installed via winget — approach from the Gab4545/ntpods fork), their
+# the WDK (installed via winget — approach from the Gab4545/librepods fork), their
 # catalogs are regenerated, and the result overwrites windows/drivers/*/prebuilt so
 # the install folder always carries drivers that match the source. The committed
 # prebuilt packages remain for local installs; install.ps1 test-signs them on the
@@ -181,6 +181,26 @@ jobs:
           path: dist
           if-no-files-found: error
 
+      # ---- MSI (WiX 5) -------------------------------------------------------
+      # Same dist folder, wrapped in a normal setup wizard. MSI versions must be
+      # numeric: a windows-vX.Y.Z tag gives X.Y.Z, everything else 0.1.<run number>.
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
+          wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
+          $version = '0.1.${{ github.run_number }}'
+          if ('${{ github.ref }}' -match '^refs/tags/windows-v(\d+\.\d+\.\d+)$') { $version = $matches[1] }
+          ./windows/installer/msi/build-msi.ps1 -Dist dist -Version $version -Out NTPods.msi
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ntpods-windows-msi
+          path: NTPods.msi
+          if-no-files-found: error
+
       # ---- Releases --------------------------------------------------------
       # push to main → rolling "nightly" pre-release, rebuilt on
       #                          every push and pointing at that commit.
@@ -203,13 +223,17 @@ jobs:
           $notes = @"
           Automatic build of ``main`` at ${{ github.sha }}.
 
-          Extract the zip, then in an **admin** PowerShell inside the folder:
-          ``powershell -ExecutionPolicy Bypass -File .\install.ps1``
-          (Test Mode must be on first — see windows/README.md.)
-          The zip is everything: the app, the daemon and both drivers (``driver\``,
-          ``driver-mic\``), all built from source in this run.
+          Turn on Test Mode first (see windows/README.md), then run **NTPods.msi**.
+          It installs the app, the background service and both drivers, and lets
+          you pick a desktop shortcut and starting with Windows.
+
+          NTPods-Windows.zip has the same files for a manual install: extract it and
+          run ``powershell -ExecutionPolicy Bypass -File .\install.ps1`` in an
+          **admin** PowerShell inside the folder.
+
+          Everything here was built from source in this run.
           "@
-          gh release create nightly NTPods-Windows.zip `
+          gh release create nightly NTPods.msi NTPods-Windows.zip `
             --target ${{ github.sha }} --prerelease --latest=false `
             --title "NTPods (nightly)" --notes $notes
           if ($LASTEXITCODE) { throw "gh release create failed ($LASTEXITCODE)" }
@@ -220,7 +244,9 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: NTPods ${{ github.ref_name }}
-          files: NTPods-Windows.zip
+          files: |
+            NTPods.msi
+            NTPods-Windows.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
