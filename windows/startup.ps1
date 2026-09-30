@@ -1,20 +1,20 @@
 <#
-    startup.ps1 - make a LibrePods Windows app launch at user login (or remove it).
+    startup.ps1 - make a NTPods Windows app launch at user login (or remove it).
 
     Per-user, NO admin needed. Copies the exe to a stable location
-    (%LOCALAPPDATA%\LibrePods) and drops a shortcut in the Startup folder, so it
+    (%LOCALAPPDATA%\NTPods) and drops a shortcut in the Startup folder, so it
     survives even if the WSL build target is cleaned.
 
     Install (default = the WinUI app):
         .\startup.ps1
-        .\startup.ps1 -Exe "C:\path\to\librepods-winui.exe"
+        .\startup.ps1 -Exe "C:\path\to\ntpods-winui.exe"
     Remove:
         .\startup.ps1 -Remove
 #>
 param(
-    [string]$Exe       = "$env:LOCALAPPDATA\LibrePods\librepods-winui.exe",
+    [string]$Exe       = "$env:LOCALAPPDATA\NTPods\ntpods-winui.exe",
     [string]$Arguments = '--tray',   # WinUI starts hidden to the tray at login
-    [string]$Name      = 'LibrePods',
+    [string]$Name      = 'NTPods',
     [switch]$Remove
 )
 
@@ -35,7 +35,7 @@ $s        = $ws.CreateShortcut($lnk)
 $s.TargetPath       = $Exe
 $s.Arguments        = $Arguments
 $s.WorkingDirectory = Split-Path $Exe
-$s.Description      = 'LibrePods AirPods control'
+$s.Description      = 'NTPods AirPods control'
 $s.Save()
 
 Write-Host "==> Startup shortcut created:"

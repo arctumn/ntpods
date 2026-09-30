@@ -1,4 +1,4 @@
-//! Bridge to the LibrePodsAAP kernel driver. Cloneable + thread-safe so the
+//! Bridge to the NTPodsAAP kernel driver. Cloneable + thread-safe so the
 //! background receive loop and the tray's ANC-send can share one handle.
 
 use std::ffi::c_void;
@@ -21,7 +21,7 @@ use windows_sys::core::GUID;
 const GENERIC_READ: u32 = 0x8000_0000;
 const GENERIC_WRITE: u32 = 0x4000_0000;
 
-const GUID_DEVINTERFACE_LIBREPODSAAP: GUID = GUID {
+const GUID_DEVINTERFACE_NTPODSAAP: GUID = GUID {
     data1: 0xC0FF_EE00,
     data2: 0x1337,
     data3: 0x4A5B,
@@ -152,7 +152,7 @@ impl Driver {
 fn open_driver() -> io::Result<HANDLE> {
     unsafe {
         let devinfo = SetupDiGetClassDevsW(
-            &GUID_DEVINTERFACE_LIBREPODSAAP,
+            &GUID_DEVINTERFACE_NTPODSAAP,
             ptr::null(),
             ptr::null_mut(),
             DIGCF_PRESENT | DIGCF_DEVICEINTERFACE,
@@ -166,7 +166,7 @@ fn open_driver() -> io::Result<HANDLE> {
         if SetupDiEnumDeviceInterfaces(
             devinfo,
             ptr::null(),
-            &GUID_DEVINTERFACE_LIBREPODSAAP,
+            &GUID_DEVINTERFACE_NTPODSAAP,
             0,
             &mut ifdata,
         ) == 0
@@ -174,7 +174,7 @@ fn open_driver() -> io::Result<HANDLE> {
             SetupDiDestroyDeviceInfoList(devinfo);
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
-                "LibrePodsAAP driver not found (installed and bound to the AirPods?)",
+                "NTPodsAAP driver not found (installed and bound to the AirPods?)",
             ));
         }
 

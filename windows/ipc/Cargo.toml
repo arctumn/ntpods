@@ -1,8 +1,8 @@
 [package]
-name = "librepods-ipc"
+name = "ntpods-ipc"
 version = "0.1.0"
 edition = "2021"
-description = "Shared IPC protocol (Command/Event types) between librepodsd and the LibrePods UIs."
+description = "Shared IPC protocol (Command/Event types) between ntpodsd and the NTPods UIs."
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

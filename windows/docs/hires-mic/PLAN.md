@@ -13,25 +13,25 @@ self-contained **virtual audio driver** instead of PipeWire.
 ## Why a driver (not VB-Cable)
 
 Windows has no API to "create a virtual microphone" — it needs a virtual audio
-device driver. We already ship a signed kernel driver (`LibrePodsAAP`), so a
+device driver. We already ship a signed kernel driver (`NTPodsAAP`), so a
 second one is the clean, dependency-free path (no third-party VB-Cable). Base it
 on Microsoft's **SYSVAD** sample (a virtual audio device with capture + render
 endpoints, no hardware). NOTE: audio drivers use **PortCls/AVStream** or the
-newer **ACX** framework — different from the KMDF+BRB approach of `LibrePodsAAP`.
+newer **ACX** framework — different from the KMDF+BRB approach of `NTPodsAAP`.
 *(What we ended up using is the MS **ACX `AudioCodec`** sample rather than SYSVAD —
 ACX on KMDF, already ROOT-enumerated and with a capture circuit.)*
 
 ## Architecture
 
 ```
-AirPods ──AAP / L2CAP──▶ LibrePodsAAP driver ──IOCTL──▶ app
+AirPods ──AAP / L2CAP──▶ NTPodsAAP driver ──IOCTL──▶ app
                                                          │  decode AAC-ELD (FFmpeg / libavcodec)
                                                          │  → PCM
                                                          ▼
-                                        LibrePodsMic virtual audio driver
+                                        NTPodsMic virtual audio driver
                                                          │
                                                          ▼
-                                   Windows sees a "LibrePods Microphone"
+                                   Windows sees a "NTPods Microphone"
                                    (Teams / Zoom / Discord / OBS / …)
 ```
 
@@ -43,7 +43,7 @@ the sink.
 ## Phases (incremental, each independently testable)
 
 1. **Virtual-mic driver base** — build + test-sign + install SYSVAD (or a trimmed
-   fork) so Windows shows a "LibrePods Microphone" capture endpoint. Prove it
+   fork) so Windows shows a "NTPods Microphone" capture endpoint. Prove it
    appears in Sound settings and apps. *(driver: `windows/drivers/mic/`)*
 2. **PCM bridge** — an IOCTL/shared-ring for user mode to push PCM samples into
    the driver; feed a test tone / a WAV → verify it's audible on the virtual mic
@@ -83,8 +83,8 @@ the sink.
   `install.ps1` now `devcon remove`s any prior device before installing so
   re-running updates in place.
 - **Phase 2 — DONE** ✅ (`87ed69f`, validated on hardware): `Common/MicPipe.{h,cpp}`
-  — a spin-locked global PCM ring buffer + a control device `\\.\LibrePodsMic`
-  exposing `IOCTL_LIBREPODS_MIC_WRITE_PCM` (0x0022A000). `StreamEngine.cpp`
+  — a spin-locked global PCM ring buffer + a control device `\\.\NTPodsMic`
+  exposing `IOCTL_NTPODS_MIC_WRITE_PCM` (0x0022A000). `StreamEngine.cpp`
   `ProcessPacket` drains the ring instead of the WAV/tone dummy. Proven end to
   end: `lp-mic-test` (a user-mode tone feeder, `windows/tools/mic-test/`)
   pushed a 440 Hz sine and it was **recorded and audible** on "Microphone
@@ -98,7 +98,7 @@ the sink.
   [[hires-mic-protocol]].
 - **Phase 3b — DONE** ✅ (validated on hardware, user's voice recorded clean &
   in tune). The tray decodes the 0x58 AUs (AAC-ELD) via an FFmpeg libavcodec
-  shim (LGPL, `eld_shim.c`), resamples, and streams to `\\.\LibrePodsMic`. Key
+  shim (LGPL, `eld_shim.c`), resamples, and streams to `\\.\NTPodsMic`. Key
   fixes: mic frames are **480 samples @ 64 kHz** (not 48 kHz — the 4-byte ASC
   lies; confirmed by the +180/AU timestamp = a 24 kHz clock over 7.5 ms frames),
   so resample **64000 → 48000**; capture circuit restricted to **48 kHz only**;
@@ -111,15 +111,15 @@ the sink.
     BluetoothEnumerateInstalledServices), with a persistent "Restoring stereo…"
     card through the reconnect.
   - **Auto-enable** — the driver's capture-activity counter
-    (IOCTL_LIBREPODS_MIC_STATUS) lets the tray auto-start the hi-res stream when
+    (IOCTL_NTPODS_MIC_STATUS) lets the tray auto-start the hi-res stream when
     an app records and auto-stop (debounced) when it finishes. + a manual mode.
   - **Make-up gain** (×3, tanh soft-limit) so the mic isn't quiet.
   - **Minimal FFmpeg** (7.1, aac-only) — avcodec 69 MB → 0.7 MB.
-  - **Name** "LibrePods" (device-agnostic).
+  - **Name** "NTPods" (device-agnostic).
   - Single-instance guard.
 
 > The pipeline described above as living in "the tray" was later moved into
-> `librepodsd`, which now owns the drivers and the decode; the UI is a thin IPC
+> `ntpodsd`, which now owns the drivers and the decode; the UI is a thin IPC
 > client. See [`../daemon-ipc/PLAN.md`](../daemon-ipc/PLAN.md).
 
 **Follow-ups still open:** exact per-device dynamic name (IPolicyConfig, needs a

@@ -1,4 +1,4 @@
-# Prebuilt LibrePodsMic driver package
+# Prebuilt NTPodsMic driver package
 
 The compiled virtual-microphone driver (`AudioCodec.sys` + `.inf` + `.cat`) so you
 can install it **without building it** — no Visual Studio / C++ / WDK required.

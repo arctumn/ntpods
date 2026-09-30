@@ -172,7 +172,7 @@ CStreamEngine::AllocateRtPackets(
     m_PacketSize = PacketSize;
     m_FirstPacketOffset = firstPacketOffset;
 
-    // LibrePods: tell the mic ring how much this client pulls per tick, so its
+    // NTPods: tell the mic ring how much this client pulls per tick, so its
     // latency trim never leaves less than a packet buffered.
     MicPipeSetPacketSize(PacketSize);
 
@@ -717,7 +717,7 @@ CCaptureStreamEngine::PrepareHardware()
 {
     PAGED_CODE();
 
-    // LibrePods: capture data comes from the mic pipe (see ProcessPacket), so there
+    // NTPods: capture data comes from the mic pipe (see ProcessPacket), so there
     // is no wave-file reader or tone generator source to initialize here.
     return CStreamEngine::PrepareHardware();
 }
@@ -776,8 +776,8 @@ CCaptureStreamEngine::ProcessPacket()
         packetBuffer += m_FirstPacketOffset;
     }
 
-    // LibrePods: fill this capture packet from the mic pipe — the PCM that user
-    // mode pushed over IOCTL_LIBREPODS_MIC_WRITE_PCM (the decoded AirPods audio).
+    // NTPods: fill this capture packet from the mic pipe — the PCM that user
+    // mode pushed over IOCTL_NTPODS_MIC_WRITE_PCM (the decoded AirPods audio).
     // Underrun is zero-filled (silence). Replaces the sample's WAV-file / tone
     // dummy sources.
     MicPipeRead(packetBuffer, m_PacketSize);

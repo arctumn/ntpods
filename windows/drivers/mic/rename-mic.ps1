@@ -1,12 +1,12 @@
 <#
-    rename-mic.ps1 - show the LibrePodsMic virtual microphone under the connected
-    device's name, e.g. "AirPods Pro de Pedro (LibrePods)" in Sound settings and
+    rename-mic.ps1 - show the NTPodsMic virtual microphone under the connected
+    device's name, e.g. "AirPods Pro de Pedro (NTPods)" in Sound settings and
     Discord. NEEDS ADMIN (writes HKLM).
 
     Two ways in:
-      * The "LibrePods Rename Mic" scheduled task (RunLevel Highest), which
+      * The "NTPods Rename Mic" scheduled task (RunLevel Highest), which
         install.ps1 registers. The daemon writes the name to
-        %LOCALAPPDATA%\LibrePods\micname.txt and fires the task with
+        %LOCALAPPDATA%\NTPods\micname.txt and fires the task with
         `schtasks /run` (daemon/src/rename.rs). No -Name, runs hidden.
       * By hand, elevated:   .\rename-mic.ps1 "AirPods Pro de Pedro"
 
@@ -15,12 +15,12 @@
     name lives in PKEY_Device_DeviceDesc; Windows shows "<DeviceDesc> (<interface
     name>)". Idempotent: when the name is already right it changes nothing and
     does NOT restart the audio service, so the daemon can fire it on every connect.
-    Every run appends to %LOCALAPPDATA%\LibrePods\rename.log.
+    Every run appends to %LOCALAPPDATA%\NTPods\rename.log.
 #>
 param([string]$Name)
 $ErrorActionPreference = 'Stop'
 
-$dir = Join-Path $env:LOCALAPPDATA 'LibrePods'
+$dir = Join-Path $env:LOCALAPPDATA 'NTPods'
 $log = Join-Path $dir 'rename.log'
 function Log([string]$msg) {
     $line = '{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $msg
@@ -67,7 +67,7 @@ try {
             $iface = Read-Str $props $ifKey
             $desc  = Read-Str $props $descKey
         } finally { $props.Close() }
-        if ($hw -ne 'ROOT\AudioCodec' -and $iface -notlike '*LibrePods*') { continue }
+        if ($hw -ne 'ROOT\AudioCodec' -and $iface -notlike '*NTPods*') { continue }
 
         $matched++
         if ($desc -ceq $Name) { Log "$id already '$Name'"; continue }
@@ -78,7 +78,7 @@ try {
     }
 } finally { $root.Close() }
 
-if (-not $matched) { Log 'no LibrePods capture endpoint found - is the LibrePodsMic driver installed?'; exit 1 }
+if (-not $matched) { Log 'no NTPods capture endpoint found - is the NTPodsMic driver installed?'; exit 1 }
 if ($changed) {
     # Apps only pick up the new name after the endpoint service re-reads it.
     Log 'restarting AudioEndpointBuilder (brief audio drop)'

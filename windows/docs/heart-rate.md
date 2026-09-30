@@ -137,7 +137,7 @@ Settings ▸ Experimental. Switching **Monitor heart rate** on starts the stream
 - The **Readings** picker switches the graph to a past session.
 
 Every reading is stored by the daemon (`daemon/src/hrdb.rs`) in
-`%LOCALAPPDATA%\LibrePods\heart-rate.sqlite3`, which has two tables:
+`%LOCALAPPDATA%\NTPods\heart-rate.sqlite3`, which has two tables:
 
 - `sessions` (device, start, end);
 - `samples` (session, Unix ms, BPM, confidence).

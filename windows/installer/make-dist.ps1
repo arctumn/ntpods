@@ -1,5 +1,5 @@
 <#
-    Assemble a ready-to-install LibrePods-dist folder from THIS repository.
+    Assemble a ready-to-install NTPods-dist folder from THIS repository.
 
     Why this exists: the dist folder had drifted into a second, older copy of the
     installer (its install.ps1 still deployed the retired iced app and tray, and
@@ -17,12 +17,12 @@
 
         windows\daemon                 cargo build --release --target x86_64-pc-windows-gnu
                                        (or the msvc target WITH -C target-feature=+crt-static)
-        windows\winui\LibrePods.WinUI  MSBuild -t:Publish -p:Configuration=Release -p:Platform=x64
+        windows\winui\NTPods.WinUI  MSBuild -t:Publish -p:Configuration=Release -p:Platform=x64
 
     Note the WinUI app needs VISUAL STUDIO's MSBuild, not `dotnet publish`: the
     WindowsAppSDK PRI step fails on the plain .NET SDK with
     "Microsoft.Build.Packaging.Pri.Tasks.dll ... could not be loaded". And its
-    publish output DROPS librepods-winui.pri, the app's own resource index, which
+    publish output DROPS ntpods-winui.pri, the app's own resource index, which
     this script copies back in - without it the app starts with no strings and no
     icons.
 
@@ -30,12 +30,12 @@
 #>
 [CmdletBinding()]
 param(
-    # Where to write the dist. Defaults to <repo parent>\LibrePods-dist, which is
+    # Where to write the dist. Defaults to <repo parent>\NTPods-dist, which is
     # where the project keeps it when the sub-projects are grouped under one root.
     [string]$Out,
     # The built daemon. Defaults to the local GNU cross-build.
     [string]$DaemonExe,
-    # The folder holding librepods-winui.exe. Defaults to the local publish output;
+    # The folder holding ntpods-winui.exe. Defaults to the local publish output;
     # CI passes its plain Build output instead.
     [string]$WinUIDir
 )
@@ -44,14 +44,14 @@ $ErrorActionPreference = 'Stop'
 $installer = $PSScriptRoot
 $win       = Split-Path -Parent $installer          # ...\windows
 $repo      = Split-Path -Parent $win                # the repo root
-$winuiOut  = Join-Path $win 'winui\LibrePods.WinUI\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64'
-if (-not $Out)       { $Out       = Join-Path (Split-Path -Parent $repo) 'LibrePods-dist' }
-if (-not $DaemonExe) { $DaemonExe = Join-Path $win 'daemon\target\x86_64-pc-windows-gnu\release\librepodsd.exe' }
+$winuiOut  = Join-Path $win 'winui\NTPods.WinUI\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64'
+if (-not $Out)       { $Out       = Join-Path (Split-Path -Parent $repo) 'NTPods-dist' }
+if (-not $DaemonExe) { $DaemonExe = Join-Path $win 'daemon\target\x86_64-pc-windows-gnu\release\ntpodsd.exe' }
 if (-not $WinUIDir)  { $WinUIDir  = Join-Path $winuiOut 'publish' }
 $resolve = { param($p) $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($p) }
 $Out = & $resolve $Out; $DaemonExe = & $resolve $DaemonExe; $WinUIDir = & $resolve $WinUIDir
 
-foreach ($p in @($DaemonExe, (Join-Path $WinUIDir 'librepods-winui.exe'))) {
+foreach ($p in @($DaemonExe, (Join-Path $WinUIDir 'ntpods-winui.exe'))) {
     if (-not (Test-Path $p)) { throw "Not built yet: $p`nSee the header of this script for the build commands." }
 }
 
@@ -86,27 +86,27 @@ Copy-Item (Join-Path $win 'daemon\vendor\ffmpeg\bin\*.dll') $Out -Force
 
 # ---- WinUI app (unpackaged + self-contained: a whole folder) ----------------
 Copy-Item (Join-Path $WinUIDir '*') (Join-Path $Out 'winui') -Recurse -Force
-$pri = Join-Path $Out 'winui\librepods-winui.pri'
+$pri = Join-Path $Out 'winui\ntpods-winui.pri'
 if (-not (Test-Path $pri)) {
     # Publish output drops it; the Build output next to publish\ still has it.
-    $src = Join-Path (Split-Path -Parent $WinUIDir) 'librepods-winui.pri'
+    $src = Join-Path (Split-Path -Parent $WinUIDir) 'ntpods-winui.pri'
     if (Test-Path $src) { Copy-Item $src (Join-Path $Out 'winui') -Force }
 }
 
 # ---- completeness check: the user gets nothing but this folder --------------
 $required = @(
     'install.ps1', 'fix-driver.ps1', 'rename-mic.ps1', 'tools\devcon.exe',
-    'driver\LibrePodsAAP.inf', 'driver\LibrePodsAAP.sys', 'driver\librepodsaap.cat',
+    'driver\NTPodsAAP.inf', 'driver\NTPodsAAP.sys', 'driver\ntpodsaap.cat',
     'driver-mic\AudioCodec.inf', 'driver-mic\AudioCodec.sys', 'driver-mic\audiocodec.cat',
-    'librepodsd.exe', 'avcodec-61.dll', 'avutil-59.dll', 'swresample-5.dll',
-    'winui\librepods-winui.exe', 'winui\librepods-winui.pri'
+    'ntpodsd.exe', 'avcodec-61.dll', 'avutil-59.dll', 'swresample-5.dll',
+    'winui\ntpods-winui.exe', 'winui\ntpods-winui.pri'
 )
 $missing = @($required | Where-Object { -not (Test-Path (Join-Path $Out $_)) })
 if ($missing) { throw "Dist is incomplete, missing: $($missing -join ', ')" }
 
 # Each driver catalog stores the flat SHA1/SHA256 of its INF. If the INF was
 # edited (or line-ending-converted) after inf2cat ran, the package won't install.
-foreach ($pkg in @(@('driver\LibrePodsAAP.inf', 'driver\librepodsaap.cat'),
+foreach ($pkg in @(@('driver\NTPodsAAP.inf', 'driver\ntpodsaap.cat'),
                    @('driver-mic\AudioCodec.inf', 'driver-mic\audiocodec.cat'))) {
     $catHex = [BitConverter]::ToString([IO.File]::ReadAllBytes((Join-Path $Out $pkg[1]))).Replace('-', '')
     $inf = Join-Path $Out $pkg[0]
@@ -117,11 +117,11 @@ foreach ($pkg in @(@('driver\LibrePodsAAP.inf', 'driver\librepodsaap.cat'),
 }
 
 # A clean Windows has no VC++ redistributable: the daemon must not import it.
-$bytes = [IO.File]::ReadAllBytes((Join-Path $Out 'librepodsd.exe'))
+$bytes = [IO.File]::ReadAllBytes((Join-Path $Out 'ntpodsd.exe'))
 $text = [Text.Encoding]::ASCII.GetString($bytes)
 foreach ($dll in 'VCRUNTIME140.dll', 'MSVCP140.dll') {
     if ($text.IndexOf($dll, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-        throw "librepodsd.exe imports $dll (not on a clean Windows). Build it with -C target-feature=+crt-static."
+        throw "ntpodsd.exe imports $dll (not on a clean Windows). Build it with -C target-feature=+crt-static."
     }
 }
 
