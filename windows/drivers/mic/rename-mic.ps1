@@ -55,6 +55,10 @@ function Read-Str($key, [string]$valueName) {
     return [string]$v
 }
 
+# Any failure below ends up in rename.log (the task runs hidden, so this is the
+# only place it shows).
+trap { Log "failed: $_"; exit 1 }
+
 $root = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($base)
 if (-not $root) { Log "cannot open HKLM\$base"; exit 1 }
 $matched = 0; $changed = 0
@@ -71,7 +75,12 @@ try {
 
         $matched++
         if ($desc -ceq $Name) { Log "$id already '$Name'"; continue }
-        $w = $root.OpenSubKey("$id\Properties", $true)
+        # The key belongs to Audiosrv/TrustedInstaller; Administrators only get
+        # SetValue on it, so OpenSubKey(..., $true) (full KEY_WRITE) is denied even
+        # elevated. Ask for exactly what the ACL grants.
+        $w = $root.OpenSubKey("$id\Properties",
+            [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree,
+            [Security.AccessControl.RegistryRights]::QueryValues -bor [Security.AccessControl.RegistryRights]::SetValue)
         try { $w.SetValue($descKey, $Name, [Microsoft.Win32.RegistryValueKind]::String) } finally { $w.Close() }
         Log "$id '$desc' -> '$Name'"
         $changed++
