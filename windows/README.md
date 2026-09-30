@@ -12,7 +12,9 @@ It has these parts:
    normal Windows apps cannot do, and exposes it via IOCTLs.
 2. **`NTPodsMic` kernel driver** ([`drivers/mic`](drivers/mic)) — a virtual audio
    device that publishes the AirPods' decoded hi-res mic as a Windows capture
-   endpoint (Teams / Zoom / Discord / OBS …).
+   endpoint (Teams / Zoom / Discord / OBS …). It needs **Windows 11 22H2 or
+   newer** (it's built on ACX, which Windows 10 doesn't have); on older Windows
+   the installer skips it and you keep the AirPods' normal hands-free mic.
 3. **`ntpodsd` daemon** ([`daemon`](daemon)) — owns both drivers, the AAP session
    and the mic pipeline (AAC-ELD decode), and serves UI clients over named-pipe IPC.
    It holds the authoritative state.
@@ -21,8 +23,10 @@ It has these parts:
    daemon. It's what you run day-to-day.
 
 Works with any AirPods (2/3, Pro 1/2/3, Max) and Apple Beats — the driver binds
-to the AAP service every AirPod advertises, not to a specific model. Features
-shown depend on the model (e.g. only Pro/Max have noise control).
+to the AAP service every AirPod advertises, not to a specific model, and the app
+finds them through that service, so a renamed pair works too. Features shown
+depend on the model (e.g. only Pro/Max have noise control). Windows 10 should
+work apart from the hi-res mic (see above), but I've only tested on Windows 11.
 
 ---
 
