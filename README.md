@@ -33,7 +33,7 @@ here is wrong, open an issue and I'll fix it.
 | Conversational awareness | yes | yes | yes |
 | Adaptive / personalized volume, allow off | yes | Android | partial |
 | Hi-res mic as a system input | yes | no | no |
-| Heart rate (AirPods Pro 3) | yes | in progress (PR #702) | no |
+| Heart rate (AirPods Pro 3) | yes | Android | no |
 | Hearing aid | experimental | Android, needs VendorID spoofing | no |
 | Head gestures | no | Android | no |
 | Other earbuds | no | Nothing (Linux) | yes |
