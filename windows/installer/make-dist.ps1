@@ -12,7 +12,7 @@
     script ends by checking every file install.ps1 needs, and fails otherwise.
 
     Everything except the two built artifacts comes straight out of the repo:
-    the installer, the recovery + mic-rename scripts, devcon, and both prebuilt
+    the installer, the recovery + mic-rename scripts, devcon, and the prebuilt
     driver packages (catalogs included). The two that must be built first:
 
         windows\daemon                 cargo build --release --target x86_64-pc-windows-gnu
@@ -57,7 +57,7 @@ foreach ($p in @($DaemonExe, (Join-Path $WinUIDir 'ntpods-winui.exe'))) {
 
 Write-Host "==> Assembling $Out"
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
-foreach ($sub in 'driver', 'driver-mic', 'tools', 'winui') {
+foreach ($sub in 'driver', 'driver-mic', 'driver-mic-acx', 'tools', 'winui') {
     $d = Join-Path $Out $sub
     if (Test-Path $d) { Remove-Item $d -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $d | Out-Null
@@ -85,7 +85,9 @@ if (-not (Test-Path (Join-Path $micPkg 'NTPodsMicPC.sys'))) {
     throw "No mic driver package in $micPkg. Build drivers\mic-portcls and run inf2cat into that folder (see the 'Regenerate driver catalogs' step in .github/workflows/ci-windows.yml), or take driver-mic\ from a release zip."
 }
 Copy-Item (Join-Path $micPkg '*') (Join-Path $Out 'driver-mic') -Force
-Get-ChildItem (Join-Path $Out 'driver'), (Join-Path $Out 'driver-mic') -Filter 'README.md' |
+# The ACX mic, the default on Windows 11 22H2+ (install.ps1 -MicDriver picks).
+Copy-Item (Join-Path $win 'drivers\mic\prebuilt\*') (Join-Path $Out 'driver-mic-acx') -Force
+Get-ChildItem (Join-Path $Out 'driver'), (Join-Path $Out 'driver-mic'), (Join-Path $Out 'driver-mic-acx') -Filter 'README.md' |
     Remove-Item -Force -ErrorAction SilentlyContinue
 
 # ---- daemon + the FFmpeg runtime it links against ---------------------------
@@ -106,6 +108,7 @@ $required = @(
     'install.ps1', 'setup-common.ps1', 'msi-setup.ps1', 'fix-driver.ps1', 'rename-mic.ps1', 'tools\devcon.exe',
     'driver\NTPodsAAP.inf', 'driver\NTPodsAAP.sys', 'driver\ntpodsaap.cat',
     'driver-mic\NTPodsMicPC.inf', 'driver-mic\NTPodsMicPC.sys', 'driver-mic\ntpodsmicpc.cat',
+    'driver-mic-acx\AudioCodec.inf', 'driver-mic-acx\AudioCodec.sys', 'driver-mic-acx\audiocodec.cat',
     'ntpodsd.exe', 'avcodec-61.dll', 'avutil-59.dll', 'swresample-5.dll',
     'winui\ntpods-winui.exe', 'winui\ntpods-winui.pri'
 )
@@ -115,7 +118,8 @@ if ($missing) { throw "Dist is incomplete, missing: $($missing -join ', ')" }
 # Each driver catalog stores the flat SHA1/SHA256 of its INF. If the INF was
 # edited (or line-ending-converted) after inf2cat ran, the package won't install.
 foreach ($pkg in @(@('driver\NTPodsAAP.inf', 'driver\ntpodsaap.cat'),
-                   @('driver-mic\NTPodsMicPC.inf', 'driver-mic\ntpodsmicpc.cat'))) {
+                   @('driver-mic\NTPodsMicPC.inf', 'driver-mic\ntpodsmicpc.cat'),
+                   @('driver-mic-acx\AudioCodec.inf', 'driver-mic-acx\audiocodec.cat'))) {
     $catHex = [BitConverter]::ToString([IO.File]::ReadAllBytes((Join-Path $Out $pkg[1]))).Replace('-', '')
     $inf = Join-Path $Out $pkg[0]
     $inCat = @('SHA1', 'SHA256') | Where-Object { $catHex.Contains((Get-FileHash $inf -Algorithm $_).Hash) }

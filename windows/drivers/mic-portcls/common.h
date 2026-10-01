@@ -1,11 +1,12 @@
 /*
     NTPodsMicPC — the NTPods virtual microphone on PortCls/WaveRT.
 
-    The mic driver NTPods ships. It replaced the ACX driver in ../mic, which only
-    loads on Windows 11 22H2+; PortCls exists on Windows 10 and 11 alike (issue
-    #14). It is capture only: one mono 16-bit 48 kHz endpoint fed by the daemon
-    through the same control device and IOCTLs the ACX driver had (\\.\NTPodsMic),
-    so ntpodsd works with either.
+    One of NTPods' two mic drivers. The ACX one in ../mic only loads on Windows
+    11 22H2+ (and is the default there); PortCls exists on Windows 10 and 11
+    alike, so this one covers everything older (issue #14) and can be picked on
+    Windows 11 too. It is capture only: one mono 16-bit 48 kHz endpoint fed by the
+    daemon through the same control device and IOCTLs as the ACX driver
+    (\\.\NTPodsMic), so ntpodsd works with either.
 
     Files:
       driver.cpp  DriverEntry, IRP routing, adapter start, control device, ring

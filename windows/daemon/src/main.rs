@@ -2084,6 +2084,7 @@ fn main() {
 
     let pipe = Arc::new(micpipe::MicPipeCell::new());
     log(&format!("mic pipe opened: {}", pipe.is_open()));
+    log(&format!("mic driver: {}", micpipe::driver_kind()));
     let ctx = Ctx {
         state: Arc::new(Mutex::new(Snapshot {
             dev_name: dev_name.clone(),

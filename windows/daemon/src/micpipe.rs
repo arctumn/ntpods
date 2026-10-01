@@ -18,6 +18,41 @@ const IOCTL_NTPODS_MIC_WRITE_PCM: u32 = 0x0022_A000;
 // CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_READ_DATA)
 const IOCTL_NTPODS_MIC_STATUS: u32 = 0x0022_6004;
 
+/// Which mic driver is loaded, for the log. Both expose the same `\\.\NTPodsMic`,
+/// so the handle can't tell; the running kernel service can: ACX is the
+/// `AudioCodec` service (drivers/mic), PortCls is `NTPodsMicPC` (drivers/mic-portcls).
+pub fn driver_kind() -> &'static str {
+    use windows_sys::Win32::System::Services::{
+        CloseServiceHandle, OpenSCManagerW, OpenServiceW, QueryServiceStatus,
+        SC_MANAGER_CONNECT, SERVICE_QUERY_STATUS, SERVICE_RUNNING, SERVICE_STATUS,
+    };
+    let running = |name: &str| -> bool {
+        let wide: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
+        unsafe {
+            let scm = OpenSCManagerW(ptr::null(), ptr::null(), SC_MANAGER_CONNECT);
+            if scm.is_null() {
+                return false;
+            }
+            let svc = OpenServiceW(scm, wide.as_ptr(), SERVICE_QUERY_STATUS);
+            let mut st: SERVICE_STATUS = std::mem::zeroed();
+            let ok = !svc.is_null()
+                && QueryServiceStatus(svc, &mut st) != 0
+                && st.dwCurrentState == SERVICE_RUNNING;
+            if !svc.is_null() {
+                CloseServiceHandle(svc);
+            }
+            CloseServiceHandle(scm);
+            ok
+        }
+    };
+    match (running("NTPodsMicPC"), running("AudioCodec")) {
+        (true, false) => "PortCls (NTPodsMicPC)",
+        (false, true) => "ACX (AudioCodec)",
+        (true, true) => "both PortCls and ACX are running",
+        (false, false) => "none running",
+    }
+}
+
 pub struct MicPipe {
     handle: HANDLE,
 }

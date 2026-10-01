@@ -50,15 +50,16 @@ jobs:
       # The drivers only change when their source does. The WDK install and the
       # driver build below take ~4 of the ~9 minutes, so cache what they produce
       # (the refreshed prebuilt packages) by a hash of windows/drivers/** and skip
-      # all four driver steps on a hit. Bump the v1 when the build steps change.
+      # all four driver steps on a hit. Bump the version when the build steps change.
       - name: Cache built drivers
         id: drivers
         uses: actions/cache@v4
         with:
           path: |
             windows/drivers/aap/prebuilt
+            windows/drivers/mic/prebuilt
             windows/drivers/mic-portcls/prebuilt
-          key: drivers-v2-${{ hashFiles('windows/drivers/**') }}
+          key: drivers-v3-${{ hashFiles('windows/drivers/**') }}
 
       # ---- Kernel drivers (WDK) ------------------------------------------------
       # A source change under windows/drivers/* only reaches users if the shipped
@@ -99,7 +100,10 @@ jobs:
           & $msbuild windows/drivers/aap/NTPodsAAP.vcxproj /p:Configuration=Release /p:Platform=x64 /p:EnableInf2cat=false /m
           if ($LASTEXITCODE) { throw "AAP driver build failed (exit $LASTEXITCODE)" }
           & $msbuild windows/drivers/mic-portcls/NTPodsMicPC.vcxproj /p:Configuration=Release /p:Platform=x64 /m
-          if ($LASTEXITCODE) { throw "Mic driver build failed (exit $LASTEXITCODE)" }
+          if ($LASTEXITCODE) { throw "PortCls mic driver build failed (exit $LASTEXITCODE)" }
+          # ACX mic: the default on Windows 11 22H2+ (the installer picks per OS).
+          & $msbuild windows/drivers/mic/AudioCodec/Driver/AudioCodec.sln /p:Configuration=Release /p:Platform=x64 /m
+          if ($LASTEXITCODE) { throw "ACX mic driver build failed (exit $LASTEXITCODE)" }
 
       - name: Regenerate driver catalogs + refresh the prebuilt packages
         if: steps.drivers.outputs.cache-hit != 'true'
@@ -118,7 +122,10 @@ jobs:
                Out = 'windows/drivers/aap/prebuilt' },
             @{ Name = 'NTPodsMicPC'; Inf = 'windows/drivers/mic-portcls/x64/Release/NTPodsMicPC.inf'; Cat = 'ntpodsmicpc.cat'
                Sys = 'windows/drivers/mic-portcls/x64/Release/NTPodsMicPC.sys'
-               Out = 'windows/drivers/mic-portcls/prebuilt' }
+               Out = 'windows/drivers/mic-portcls/prebuilt' },
+            @{ Name = 'AudioCodec'; Inf = 'windows/drivers/mic/AudioCodec/Driver/x64/Release/AudioCodec.inf'; Cat = 'audiocodec.cat'
+               Sys = 'windows/drivers/mic/AudioCodec/Driver/x64/Release/AudioCodec.sys'
+               Out = 'windows/drivers/mic/prebuilt' }
           )
           foreach ($d in $drivers) {
             foreach ($f in @($d.Sys, $d.Inf)) { if (-not $f -or -not (Test-Path $f)) { throw "$($d.Name): missing '$f' after build" } }
@@ -129,7 +136,7 @@ jobs:
             & $inf2cat.FullName /driver:$pkg /os:10_X64
             $cat = Join-Path $pkg $d.Cat
             if (-not (Test-Path $cat)) { throw "$($d.Name): Inf2Cat did not produce $($d.Cat)" }
-            # The mic's prebuilt folder isn't in git; the AAP's is, and gets overwritten.
+            # The PortCls mic's prebuilt folder isn't in git; the others are, and get overwritten.
             New-Item -ItemType Directory -Force -Path $d.Out | Out-Null
             Copy-Item (Join-Path $pkg '*') $d.Out -Force
             Write-Host "==> Freshly built $($d.Name) copied into $($d.Out)"

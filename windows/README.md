@@ -10,13 +10,19 @@ It has these parts:
 1. **`NTPodsAAP` kernel driver** ([`drivers/aap`](drivers/aap)) — opens the Apple
    Accessory Protocol (AAP) L2CAP channel to the AirPods in kernel mode, which
    normal Windows apps cannot do, and exposes it via IOCTLs.
-2. **`NTPodsMic` kernel driver** ([`drivers/mic-portcls`](drivers/mic-portcls)) — a
-   virtual audio device that publishes the AirPods' decoded hi-res mic as a Windows
-   capture endpoint (Teams / Zoom / Discord / OBS …). It's a PortCls/WaveRT driver
-   and needs **Windows 10 2004 or newer**; on older Windows the installer skips it
-   and you keep the AirPods' normal hands-free mic. (Older releases used an ACX
-   driver, [`drivers/mic`](drivers/mic), which only loads on Windows 11 22H2+;
-   installing a newer release replaces it.)
+2. **`NTPodsMic` kernel driver** — a virtual audio device that publishes the
+   AirPods' decoded hi-res mic as a Windows capture endpoint (Teams / Zoom /
+   Discord / OBS …). There are two versions and the installer puts one of them in:
+   - **ACX** ([`drivers/mic`](drivers/mic)), the default on **Windows 11 22H2 or
+     newer** (it doesn't load on anything older);
+   - **PortCls** ([`drivers/mic-portcls`](drivers/mic-portcls)), used on
+     **Windows 10 2004 or newer** and on Windows 11 before 22H2. You can pick it
+     on Windows 11 too: untick "ACX microphone driver" in the MSI, or run
+     `install.ps1 -MicDriver portcls`.
+
+   They behave the same for apps and the daemon; `daemon.log` says which one is
+   loaded (`mic driver: ...`). Before Windows 10 2004 the installer skips the mic
+   and you keep the AirPods' normal hands-free mic.
 3. **`ntpodsd` daemon** ([`daemon`](daemon)) — owns both drivers, the AAP session
    and the mic pipeline (AAC-ELD decode), and serves UI clients over named-pipe IPC.
    It holds the authoritative state.
@@ -97,18 +103,19 @@ BTHENUM\{74ec2172-...}`. Check it loaded (should be `OK`, not error 52):
 ```powershell
 Get-PnpDevice -FriendlyName "NTPods AAP*" | Select Status
 ```
-The mic driver needs a `ROOT\NTPodsMicPC` device created with `devcon`, so the
-simplest way to install or update just the mic is the zip's `install.ps1`, which
-also removes the old ACX mic. A virtual microphone should appear in
-**Sound ▸ Input**.
+The mic driver needs a ROOT device created with `devcon` (`ROOT\AudioCodec` for
+ACX, `ROOT\NTPodsMicPC` for PortCls), so the simplest way to install, update or
+switch just the mic is the zip's `install.ps1`, which removes the other one first.
+A virtual microphone should appear in **Sound ▸ Input**.
 
 ### Building the drivers yourself (optional)
-CI builds both drivers on every run ([`ci-windows.yml`](../.github/workflows/ci-windows.yml):
+CI builds all three drivers on every run ([`ci-windows.yml`](../.github/workflows/ci-windows.yml):
 `windows-2022`, SDK + WDK 10.0.26100 via winget, catalogs regenerated with Inf2Cat).
 To build locally you need Visual Studio 2022/2026 with **Desktop development with
 C++** + **Spectre x64/x86 libs** + a **Windows 11 SDK** and the **matching WDK**
 (SDK & WDK build numbers must match, e.g. `28000`). See
-[`drivers/aap/README.md`](drivers/aap/README.md); the mic is a plain vcxproj,
+[`drivers/aap/README.md`](drivers/aap/README.md) and
+[`drivers/mic/README.md`](drivers/mic/README.md); the PortCls mic is a plain vcxproj,
 [`drivers/mic-portcls/NTPodsMicPC.vcxproj`](drivers/mic-portcls/NTPodsMicPC.vcxproj).
 
 ### Uninstall / revert
