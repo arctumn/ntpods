@@ -4,6 +4,7 @@
 
       -Action install         take over older installs, register the helper tasks,
                               and with -Drivers also test-sign + install both drivers
+                              (-MicDriver acx|portcls, from the MSI's mic choice)
       -Action remove-drivers  remove both drivers and the test certificate
       -Action uninstall       stop NTPods, remove the helper tasks and startup entries
       -Action stop            stop NTPods so its files can be replaced
@@ -15,7 +16,8 @@ param(
     [string]$UserSid,
     [string]$LocalAppData,
     [string]$AppData,
-    [switch]$Drivers
+    [switch]$Drivers,
+    [ValidateSet('auto', 'acx', 'portcls')][string]$MicDriver = 'auto'
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'setup-common.ps1')
@@ -24,7 +26,7 @@ $logDir = Join-Path $env:ProgramData 'NTPods'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 Start-Transcript -Append -Path (Join-Path $logDir 'setup.log') | Out-Null
 try {
-    Write-Host "==> msi-setup $Action (user $UserSid, drivers: $Drivers)"
+    Write-Host "==> msi-setup $Action (user $UserSid, drivers: $Drivers, mic: $MicDriver)"
     switch ($Action) {
         'stop' {
             Stop-NTPods
@@ -37,7 +39,7 @@ try {
             if ($Drivers) {
                 if (-not (Test-TestMode)) { throw 'Test Mode is not active; the drivers would not load.' }
                 $work = Join-Path $env:ProgramData "NTPods\drivers-$(Get-Random)"
-                try { Install-NTPodsDrivers $PSScriptRoot $work }
+                try { Install-NTPodsDrivers $PSScriptRoot $work $MicDriver }
                 finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
             }
             Register-NTPodsTasks $PSScriptRoot $UserSid

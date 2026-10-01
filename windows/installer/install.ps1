@@ -5,6 +5,8 @@
     Installs BOTH kernel drivers (test-signed on the fly):
       • NTPodsAAP  — opens the AirPods AAP L2CAP channel (battery, ANC, mic, …).
       • NTPodsMic  — a virtual microphone so any app can use the AirPods mic.
+                     Two drivers exist: ACX (default on Windows 11 22H2+) and
+                     PortCls (Windows 10 2004+). -MicDriver acx|portcls overrides.
     Then copies the daemon + WinUI app to %LOCALAPPDATA%\NTPods, registers the
     two elevated helper tasks (driver recovery, mic rename) and adds the apps to
     startup (the WinUI app launches minimised to the tray).
@@ -21,8 +23,9 @@
     Usage (elevated):  powershell -ExecutionPolicy Bypass -File .\install.ps1
     With BitLocker on it asks you to confirm the recovery key is saved; -Yes
     skips that question (unattended installs).
+      .\install.ps1 -MicDriver portcls     use the PortCls mic on Windows 11 too
 #>
-param([switch]$Yes)
+param([switch]$Yes, [ValidateSet('auto', 'acx', 'portcls')][string]$MicDriver = 'auto')
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $here 'setup-common.ps1')
@@ -61,6 +64,7 @@ if ($bitlocker) {
 $required = @(
     'driver\NTPodsAAP.sys', 'driver\ntpodsaap.cat', 'driver\NTPodsAAP.inf',
     'driver-mic\NTPodsMicPC.sys', 'driver-mic\ntpodsmicpc.cat', 'driver-mic\NTPodsMicPC.inf',
+    'driver-mic-acx\AudioCodec.sys', 'driver-mic-acx\audiocodec.cat', 'driver-mic-acx\AudioCodec.inf',
     'tools\devcon.exe', 'ntpodsd.exe', 'avcodec-61.dll', 'avutil-59.dll', 'swresample-5.dll',
     'winui\ntpods-winui.exe', 'fix-driver.ps1', 'rename-mic.ps1'
 ) | ForEach-Object { Join-Path $here $_ }
@@ -76,7 +80,7 @@ Remove-SetupLeftovers $env:LOCALAPPDATA
 
 # ---- 2. both drivers (test-signed here, then pnputil / devcon) ---------------
 $work = Join-Path $env:TEMP "NTPods-drivers-$(Get-Random)"
-try { Install-NTPodsDrivers $here $work }
+try { Install-NTPodsDrivers $here $work $MicDriver }
 finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
 
 # ---- 3. copy the apps -------------------------------------------------------

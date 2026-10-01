@@ -75,9 +75,11 @@ body:
         & {
           "== windows"; [Environment]::OSVersion.VersionString; (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').DisplayVersion
           "== boot options"; (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control').SystemStartOptions
+          "== secure boot (1 = on)"; (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\State' -ErrorAction SilentlyContinue).UEFISecureBootEnabled
           "== ntpods version"; Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object DisplayName -match 'NTPods' | Select-Object DisplayName, DisplayVersion, InstallDate | Format-List | Out-String
           "== bluetooth"; Get-PnpDevice -Class Bluetooth | Select-Object Status, FriendlyName, InstanceId | Format-Table -AutoSize | Out-String -Width 300
           "== ntpods devices"; Get-PnpDevice | Where-Object { $_.FriendlyName -match 'NTPods|LibrePods|AirPods|Beats' } | Select-Object Status, Class, FriendlyName, Problem | Format-Table -AutoSize | Out-String -Width 300
+          "== mic driver (AudioCodec = ACX, NTPodsMicPC = PortCls)"; Get-CimInstance Win32_SystemDriver -Filter "Name='AudioCodec' OR Name='NTPodsMicPC'" | Select-Object Name, State | Format-Table -AutoSize | Out-String
           "== processes"; Get-Process ntpods*, librepods* -ErrorAction SilentlyContinue | Select-Object Name, Path | Format-Table -AutoSize | Out-String -Width 300
           "== tasks"; Get-ScheduledTask | Where-Object TaskName -match 'NTPods|LibrePods' | Select-Object TaskName, State | Format-Table -AutoSize | Out-String
           "== setup.log"; Get-Content "$env:ProgramData\NTPods\setup.log" -Tail 80 -ErrorAction SilentlyContinue

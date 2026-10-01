@@ -33,6 +33,14 @@
     <Launch Condition="Installed OR (BOOTOPTIONS ~&gt;&lt; &quot;TESTSIGNING&quot;)"
             Message="Test Mode is not on, so Windows would refuse to load the NTPods drivers.&#13;&#10;&#13;&#10;1. If BitLocker is on, save your recovery key first (https://aka.ms/myrecoverykey or: manage-bde -protectors -get C:). Changing Secure Boot or Test Mode can make Windows ask for it at the next boot.&#13;&#10;2. Turn off Secure Boot in your firmware/BIOS.&#13;&#10;3. In an admin terminal run:  bcdedit /set testsigning on&#13;&#10;4. Reboot (&quot;Test Mode&quot; shows in the bottom-right corner) and run this installer again." />
 
+    <!-- The ACX mic driver only loads on Windows 11 22H2 (build 22621) or newer, so
+         the "ACX microphone" feature below only exists there. VersionNT/WindowsBuild
+         are frozen for compatibility on Windows 10+, hence the registry. -->
+    <Property Id="OSBUILD">
+      <RegistrySearch Id="OsBuild" Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+                      Name="CurrentBuildNumber" Type="raw" />
+    </Property>
+
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="NTPods" />
     </StandardDirectory>
@@ -70,6 +78,11 @@
       <RegistryValue Root="HKLM" Key="Software\NTPods" Name="Drivers" Type="integer" Value="1" KeyPath="yes" />
     </Component>
 
+    <!-- Holds no files: selected = ACX mic, not selected = PortCls mic. -->
+    <Component Id="MicAcxMarker" Directory="INSTALLFOLDER" Guid="B7C2E4A1-9D3F-4E6B-8A5C-1F0D2E3B4C57">
+      <RegistryValue Root="HKLM" Key="Software\NTPods" Name="MicAcx" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
     <DirectoryRef Id="INSTALLFOLDER">
       <Directory Id="WinuiDir" Name="winui" />
     </DirectoryRef>
@@ -82,6 +95,11 @@
       <Feature Id="Drivers" Title="Drivers"
                Description="The AirPods driver and the NTPods microphone, test-signed on this PC. NTPods needs them; only leave this off if they are already installed.">
         <ComponentRef Id="DriversMarker" />
+        <Feature Id="MicAcx" Title="ACX microphone driver"
+                 Description="Use the ACX microphone driver (Windows 11 22H2 and newer). Turn this off to use the PortCls driver instead, the one Windows 10 uses.">
+          <Level Value="0" Condition="OSBUILD &lt; 22621" />
+          <ComponentRef Id="MicAcxMarker" />
+        </Feature>
       </Feature>
       <Feature Id="Desktop" Title="Desktop shortcut" Description="An NTPods shortcut on the desktop.">
         <ComponentRef Id="DesktopShortcut" />
@@ -96,8 +114,12 @@
     <!-- Folder properties end in "\", which would escape the closing quote on the
          command line, hence the trailing "." -->
 
+    <SetProperty Action="SetMicAcx" Id="MICDRIVER" Sequence="execute" Before="SetNTPodsInstallDrv"
+                 Condition="&amp;MicAcx=3" Value="acx" />
+    <SetProperty Action="SetMicPortCls" Id="MICDRIVER" Sequence="execute" Before="SetNTPodsInstallDrv"
+                 Condition="NOT (&amp;MicAcx=3)" Value="portcls" />
     <SetProperty Action="SetNTPodsInstallDrv" Id="NTPodsInstall" Sequence="execute" Before="NTPodsInstall"
-                 Condition="&amp;Drivers=3" Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]msi-setup.ps1&quot; -Action install -UserSid [UserSID] -LocalAppData &quot;[LocalAppDataFolder].&quot; -AppData &quot;[AppDataFolder].&quot; -Drivers" />
+                 Condition="&amp;Drivers=3" Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]msi-setup.ps1&quot; -Action install -UserSid [UserSID] -LocalAppData &quot;[LocalAppDataFolder].&quot; -AppData &quot;[AppDataFolder].&quot; -Drivers -MicDriver [MICDRIVER]" />
     <SetProperty Action="SetNTPodsInstall" Id="NTPodsInstall" Sequence="execute" Before="NTPodsInstall"
                  Condition="NOT (&amp;Drivers=3)" Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]msi-setup.ps1&quot; -Action install -UserSid [UserSID] -LocalAppData &quot;[LocalAppDataFolder].&quot; -AppData &quot;[AppDataFolder].&quot;" />
     <SetProperty Id="NTPodsStop" Sequence="execute" Before="NTPodsStop" Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]msi-setup.ps1&quot; -Action stop" />

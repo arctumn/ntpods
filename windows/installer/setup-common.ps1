@@ -59,6 +59,26 @@ function Test-MicSupported {
     [Environment]::OSVersion.Version.Build -ge 19041
 }
 
+# There are two mic drivers with the same \\.\NTPodsMic control device, so the
+# daemon works with either:
+#   acx      ACX (drivers/mic), the default on Windows 11 22H2 (build 22621)+;
+#            it needs ACX 1.1 / KMDF 1.31, which older Windows doesn't have.
+#   portcls  PortCls/WaveRT (drivers/mic-portcls), Windows 10 2004+.
+# 'auto' picks by OS. Asking for ACX where it can't load falls back to PortCls.
+function Resolve-MicDriver([string]$choice) {
+    $build = [Environment]::OSVersion.Version.Build
+    $acxOk = $build -ge 22621
+    switch ($choice) {
+        'portcls' { return 'portcls' }
+        'acx' {
+            if ($acxOk) { return 'acx' }
+            Write-Host "==> The ACX mic needs Windows 11 22H2 or newer (this is build $build); using the PortCls mic instead." -ForegroundColor Yellow
+            return 'portcls'
+        }
+        default { if ($acxOk) { return 'acx' } else { return 'portcls' } }
+    }
+}
+
 # Run a native tool, echo its output, and fail on an exit code outside $ok.
 # (Native stderr must not become a terminating error under 'Stop', so the
 # preference is relaxed for the call itself.)
@@ -187,17 +207,25 @@ function Remove-ZipInstall([string]$localAppData, [string]$appData) {
 }
 
 # ---- drivers ------------------------------------------------------------------
-# $root holds driver\, driver-mic\ and tools\devcon.exe (the dist / install dir).
-# The packages are copied to $work and signed there, so the files the MSI installed
-# stay byte-identical (a repair would otherwise see them as changed).
-function Install-NTPodsDrivers([string]$root, [string]$work) {
+# $root holds driver\, driver-mic\ (PortCls), driver-mic-acx\ and tools\devcon.exe
+# (the dist / install dir). The packages are copied to $work and signed there, so
+# the files the MSI installed stay byte-identical (a repair would otherwise see
+# them as changed). $micDriver: auto | acx | portcls, see Resolve-MicDriver.
+function Install-NTPodsDrivers([string]$root, [string]$work, [string]$micDriver = 'auto') {
     $devcon = Join-Path $root 'tools\devcon.exe'
+    $micKind = Resolve-MicDriver $micDriver
     New-Item -ItemType Directory -Force -Path $work | Out-Null
-    foreach ($d in 'driver', 'driver-mic') {
+    foreach ($d in 'driver', 'driver-mic', 'driver-mic-acx') {
         Copy-Item (Join-Path $root $d) $work -Recurse -Force
     }
     $aap = @{ sys = Join-Path $work 'driver\NTPodsAAP.sys'; cat = Join-Path $work 'driver\ntpodsaap.cat'; inf = Join-Path $work 'driver\NTPodsAAP.inf' }
-    $mic = @{ sys = Join-Path $work 'driver-mic\NTPodsMicPC.sys'; cat = Join-Path $work 'driver-mic\ntpodsmicpc.cat'; inf = Join-Path $work 'driver-mic\NTPodsMicPC.inf' }
+    $mic = if ($micKind -eq 'acx') {
+        @{ name = 'ACX'; hwid = 'ROOT\AudioCodec'
+           sys = Join-Path $work 'driver-mic-acx\AudioCodec.sys'; cat = Join-Path $work 'driver-mic-acx\audiocodec.cat'; inf = Join-Path $work 'driver-mic-acx\AudioCodec.inf' }
+    } else {
+        @{ name = 'PortCls'; hwid = 'ROOT\NTPodsMicPC'
+           sys = Join-Path $work 'driver-mic\NTPodsMicPC.sys'; cat = Join-Path $work 'driver-mic\ntpodsmicpc.cat'; inf = Join-Path $work 'driver-mic\NTPodsMicPC.inf' }
+    }
 
     # Test code-signing cert, trusted for driver loading. Reuse the one from an
     # earlier run instead of piling up a new one every time.
@@ -229,7 +257,7 @@ function Install-NTPodsDrivers([string]$root, [string]$work) {
     }
     Write-Host '==> Signing NTPodsAAP...'
     & $sign $aap.sys; & $sign $aap.cat
-    Write-Host '==> Signing NTPodsMic...'
+    Write-Host "==> Signing NTPodsMic ($($mic.name))..."
     & $sign $mic.sys; & $sign $mic.cat
 
     # NTPodsAAP: PnP profile driver, via pnputil.
@@ -239,9 +267,8 @@ function Install-NTPodsDrivers([string]$root, [string]$work) {
     # 259 = added, but no matching device yet (AirPods not paired); 3010 = reboot needed.
     Invoke-Tool 'Installing NTPodsAAP (pnputil)' @(0, 259, 3010) { pnputil /add-driver $aap.inf /install }
 
-    # NTPodsMic: ROOT-enumerated device, via devcon. Older releases shipped an ACX
-    # mic (ROOT\AudioCodec, Windows 11 22H2+ only); remove it too so the two never
-    # show up side by side.
+    # NTPodsMic: ROOT-enumerated device, via devcon. Remove both kinds first, so
+    # switching between ACX and PortCls never leaves two mics side by side.
     Write-Host '==> Removing any existing mic device...'
     Invoke-Tool 'Removing the old mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\NTPodsMicPC' }
     Invoke-Tool 'Removing the old ACX mic device (devcon)' @(0, 1, 2) { & $devcon remove 'ROOT\AudioCodec' }
@@ -254,11 +281,11 @@ function Install-NTPodsDrivers([string]$root, [string]$work) {
         Write-Host "==> Skipping NTPodsMic: it needs Windows 10 2004 or newer (this is build $([Environment]::OSVersion.Version.Build)). Battery, noise control and the rest still work." -ForegroundColor Yellow
         return
     }
-    Write-Host '==> Installing NTPodsMic (virtual microphone)...'
+    Write-Host "==> Installing NTPodsMic, $($mic.name) driver (virtual microphone)..."
     # devcon: 0 = done, 1 = done but a reboot is needed.
-    Invoke-Tool 'Installing NTPodsMic (devcon)' @(0, 1) { & $devcon install $mic.inf 'ROOT\NTPodsMicPC' }
-    $micDev = Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.HardwareID -contains 'ROOT\NTPodsMicPC' }
-    if (-not $micDev) { throw 'devcon reported success, but no ROOT\NTPodsMicPC device exists.' }
+    Invoke-Tool 'Installing NTPodsMic (devcon)' @(0, 1) { & $devcon install $mic.inf $mic.hwid }
+    $micDev = Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.HardwareID -contains $mic.hwid }
+    if (-not $micDev) { throw "devcon reported success, but no $($mic.hwid) device exists." }
 }
 
 function Uninstall-NTPodsDrivers([string]$root) {
@@ -276,8 +303,8 @@ function Uninstall-NTPodsDrivers([string]$root) {
     Remove-TestCert 'CN=NTPods Test Cert'
 }
 
-# Remove every mic driver package from the driver store: the current PortCls one
-# and the old ACX one. The ACX INF is named after the WDK sample it came from, so
+# Remove every mic driver package from the driver store, PortCls and ACX alike.
+# The ACX INF is named after the WDK sample it came from, so
 # match the provider too; older builds still carried the sample's VS_Microsoft /
 # LibrePods.
 function Remove-MicDriverPackages {
